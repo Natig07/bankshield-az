@@ -1,33 +1,40 @@
 # NEXT_STEPS.md
 
-Resume point for a fresh session. The authenticated dashboard now reads live SQLite data and the authentication implementation from the prior phase remains in place. The next work is operational security review and the remaining human regulatory/source review—not restarting or scaffolding the application.
+Resume point for a fresh session. The authenticated dashboard reads live SQLite data, and the Regulatory Library now supports maintaining source/version/requirement records with review history. Authentication remains implemented; no auth or database migration changes were made in the latest work.
 
-## 1. Verified database foundation (2026-10-15)
+## 1. Regulatory Library workflow
+
+- `src/app/[lang]/(app)/regulatory/page.tsx` reads actual source/version/requirement records. Administrators can create/edit source metadata, append source versions, add/edit requirements, and record status transitions with review notes. Server Actions independently require `regulatory:manage`, which is Administrator-only.
+- New source versions and requirements start pending verification. Required legal data is not fabricated; leave unconfirmed dates, applicability, and clause text blank. Requirement verification requires a verified parent version. Verification history is appended to `VerificationEvent`.
+- Version/requirement content becomes locked after review starts; return to pending with a review note to correct it. Verified source content should be updated with a new version. There is no deletion interface/action.
+- 39 tests, typecheck, lint, Prisma validation, and production build passed. UI testing as an authenticated admin is still pending because this local DB currently has no unexpired admin session.
+
+## 2. Verified database foundation (2026-10-15)
 
 - Prisma CLI, client, and SQLite adapter are locked at 7.10.0; `better-sqlite3` is 12.11.1.
 - The local ignored `.env` uses `DATABASE_URL="file:./data/dev.db"`; Prisma config loads it with `dotenv/config`. The same URL is documented in `.env.example`. Do not overwrite an existing `.env`.
 - Authentication does not use `SESSION_SECRET`; it stores only hashes of random database session tokens.
-- The initial migration and additive authentication migration are applied. The verified development DB is `data/dev.db`, currently with zero users; its authentication tables are `Session` and `BootstrapState`.
+- The initial migration and additive authentication migration are applied. The verified development DB is `data/dev.db`; a read-only check found 2 users, 1 active administrator, and 1 bootstrap marker. There are no unexpired sessions for the administrator. Do not rerun bootstrap; it must refuse because the admin already exists. If the browser appears signed in as that administrator, verify it is configured for this same database, restart the server, and sign in again with the existing credentials.
 - Dashboard queries in `src/lib/dashboard/data.ts` read regulatory sources and verified requirements globally, plus current assessments, engagements, findings, evidence, overdue actions, and pending suggestions scoped to engagements the signed-in user may access. Dashboard query errors render an error state and are not converted to zero.
 - The dashboard's existing “Preview build” text was a hardcoded placeholder; the dashboard had no Prisma data queries even though the shared Prisma client and database were configured. This is corrected. The current database query succeeded and returned empty entity counts.
-- The production build was started for an HTTP smoke check: login and health returned 200, while unauthenticated `/az` correctly redirected to `/az/login`. The database has zero users, so no authenticated browser dashboard session was performed.
+- The production build was started for an HTTP smoke check: login and health returned 200, while unauthenticated `/az` correctly redirected to `/az/login`. No authenticated browser dashboard session was performed; the database has no unexpired session for its administrator.
 - Current validation results and the earlier Phase 1 initialization history are recorded in PROGRESS.md. Never run a reset command against the local database.
 
-## 2. Authentication status and local use
+## 3. Authentication status and local use
 
 - Implemented: Argon2id login, generic authentication failures, 15-minute lockout after five failed attempts, eight-hour revocable DB sessions, server-side permission guards, engagement membership scoping, logout, disabled-account handling, and bilingual administrator user management.
-- To provision the first account, set `BOOTSTRAP_ADMIN_EMAIL` and `BOOTSTRAP_ADMIN_NAME` in a local PowerShell session and run `npm run auth:bootstrap`. Enter a unique password of at least 12 characters at the hidden prompt. This is a local CLI-only, one-time transaction; it refuses production execution and repeat bootstrap. Never use a seeded/default password or commit the environment values.
-- Run `npm run dev`, then sign in at `/az/login` or `/en/login`. No user exists in the development DB until the operator runs bootstrap.
-- Dashboard integration tests now cover empty database state, populated data, engagement scoping, and query errors. `npm test` passed 37 tests in the latest run (see PROGRESS.md).
+- The initial administrator already exists in the configured database. Do not run `npm run auth:bootstrap` again. If provisioning a different fresh database, use the documented CLI-only setup with `BOOTSTRAP_ADMIN_EMAIL` and `BOOTSTRAP_ADMIN_NAME`; never add public registration or hardcoded credentials.
+- Confirm the server uses `DATABASE_URL=file:./data/dev.db`, restart it if necessary, then sign in at `/az/login` or `/en/login` with the existing administrator credentials. Do not reset the database or edit user/session rows by hand.
+- Dashboard and regulatory integration tests use isolated SQLite databases; see PROGRESS.md for the latest test counts.
 
-## 3. Remaining security and product work
+## 4. Remaining security and product work
 
 - No MFA, password reset/recovery, or built-in per-IP/distributed login throttle. Apply trusted proxy/firewall limits if exposed beyond the private on-prem network.
 - Custom authentication code has not received an independent production security review. Verify reverse-proxy forwarding headers and production HTTPS/cookie behavior before deployment.
 - `npm audit --omit=dev` reported four high advisories in Prisma's `deepmerge-ts` / `mysql2` dependency chain. A breaking Prisma downgrade was not applied; review on a safe, compatible Prisma update.
-- Existing compliance pages and workflows are still placeholders, despite dashboard metrics now querying existing tables. Any future database reads/writes must use centralized server-side permissions and engagement-scoped access; hiding UI controls is not an authorization check.
+- Audit engagements/assessments, evidence uploads, reporting, and AI workflows are still placeholders. Any future data operation must use centralized server-side permissions and engagement-scoped access; hiding UI controls is not an authorization check. Operator verification of the new Regulatory Library through an administrator session is also outstanding.
 - Continue the verification checklist in REGULATORY_SOURCES.md; no regulatory item is verified without a named reviewer. Have a native speaker review the Azerbaijani dictionary.
 
-## 4. Before further changes
+## 5. Before further changes
 
 Run `npm run typecheck`, `npx eslint`, `npm test`, and `npm run build`. Update PROGRESS.md with actual results. Do not implement AI analysis, evidence uploads, regulatory scraping, or additional modules until explicitly scoped.

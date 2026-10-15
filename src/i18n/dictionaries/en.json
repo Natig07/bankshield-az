@@ -116,6 +116,81 @@
       "phase": "Phase 1"
     }
   },
+  "regulatoryLibrary": {
+    "description": "Maintain source records, versions, and provision-level requirements. New records remain pending legal verification until a qualified reviewer records a decision.",
+    "createSource": "Add regulatory source",
+    "editSource": "Edit source details",
+    "addVersion": "Add source version",
+    "editVersion": "Edit version provenance",
+    "createRequirement": "Add requirement",
+    "editRequirement": "Edit requirement",
+    "requirements": "Requirements",
+    "versions": "Versions",
+    "noSources": "No regulatory sources have been recorded.",
+    "noRequirements": "No requirements have been recorded for this version.",
+    "noVersions": "No versions have been recorded.",
+    "historyTitle": "Verification history",
+    "pendingNotice": "Only enter details confirmed from an authoritative record. Leave unknown dates, applicability, and clause wording blank. New sources, versions, and requirements always start pending legal verification.",
+    "lockedNotice": "Version and requirement content can only be edited while pending verification. Once review starts, return it to pending with a review note before making corrections; verified content should be replaced by a new version.",
+    "noDeleteNotice": "Records cannot be deleted in this interface. This protects sources and requirements referenced by audits; use a new version or mark a superseded record instead.",
+    "sourceCount": "Sources",
+    "requirementCount": "Requirements",
+    "save": "Save",
+    "saving": "Saving…",
+    "add": "Add",
+    "adding": "Adding…",
+    "transition": "Update verification status",
+    "reviewNote": "Review note (required)",
+    "emptyDate": "Not recorded",
+    "fields": {
+      "code": "Internal source code",
+      "title": "Document title",
+      "issuer": "Issuing authority",
+      "sourceUrl": "Official source URL",
+      "kind": "Source type",
+      "language": "Document language",
+      "versionLabel": "Version label",
+      "decisionNumber": "Decision/publication number (if confirmed)",
+      "decisionDate": "Publication or decision date (if confirmed)",
+      "effectiveFrom": "Effective from (if confirmed)",
+      "effectiveTo": "Effective to (if confirmed)",
+      "clauseId": "Provision or clause reference",
+      "section": "Section",
+      "topic": "Topic",
+      "textOriginal": "Original provision text",
+      "textTranslation": "Translated text",
+      "translationLabel": "Translation label",
+      "translationSource": "Translation source",
+      "applicability": "Applicability (as stated by source)",
+      "requirementType": "Requirement type"
+    },
+    "sourceKinds": {
+      "MANDATORY_LAW": "Mandatory law or regulation",
+      "OPTIONAL_FRAMEWORK": "Optional framework"
+    },
+    "languages": {
+      "az": "Azerbaijani",
+      "en": "English"
+    },
+    "requirementTypes": {
+      "MANDATORY_LAW": "Mandatory law",
+      "OPTIONAL_FRAMEWORK": "Optional framework"
+    },
+    "actions": {
+      "PENDING_VERIFICATION": "Pending verification",
+      "UNDER_LEGAL_REVIEW": "Under legal review",
+      "VERIFIED": "Verified",
+      "SUPERSEDED": "Superseded",
+      "saved": "Changes saved.",
+      "statusUpdated": "Verification status and review history updated.",
+      "invalidInput": "Some fields are invalid. Check the values and try again.",
+      "duplicate": "A source code, version label, or clause reference already exists.",
+      "notFound": "This record no longer exists. Refresh the page and try again.",
+      "invalidTransition": "That verification status transition is not allowed.",
+      "recordLocked": "This record is locked for editing in its current verification status.",
+      "noTransition": "No further status changes are available."
+    }
+  },
   "dashboard": {
     "title": "Dashboard",
     "subtitle": "Overview of regulatory verification and audit progress.",

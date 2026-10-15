@@ -116,6 +116,81 @@
       "phase": "Mərhələ 1"
     }
   },
+  "regulatoryLibrary": {
+    "description": "Normativ mənbə qeydlərini, versiyaları və müddəa səviyyəli tələbləri idarə edin. Səlahiyyətli rəyçi qərarı qeyd edənədək yeni qeydlər hüquqi yoxlama gözləyir.",
+    "createSource": "Normativ mənbə əlavə et",
+    "editSource": "Mənbə məlumatlarını redaktə et",
+    "addVersion": "Mənbə versiyası əlavə et",
+    "editVersion": "Versiyanın mənbə məlumatlarını redaktə et",
+    "createRequirement": "Tələb əlavə et",
+    "editRequirement": "Tələbi redaktə et",
+    "requirements": "Tələblər",
+    "versions": "Versiyalar",
+    "noSources": "Hələ normativ mənbə qeydə alınmayıb.",
+    "noRequirements": "Bu versiya üçün hələ tələb qeydə alınmayıb.",
+    "noVersions": "Hələ versiya qeydə alınmayıb.",
+    "historyTitle": "Yoxlama tarixçəsi",
+    "pendingNotice": "Yalnız mötəbər rəsmi mənbədən təsdiqlənən məlumatları daxil edin. Tarix, tətbiqolunma və müddəanın mətni məlum deyilsə, boş saxlayın. Yeni mənbələr, versiyalar və tələblər həmişə hüquqi yoxlama gözləyən statusda başlayır.",
+    "lockedNotice": "Versiya və tələb məzmunu yalnız yoxlama gözləyən statusda redaktə edilə bilər. Baxış başladıqdan sonra düzəliş üçün rəy qeydi ilə gözləmə statusuna qaytarın; təsdiqlənmiş məzmunu yeni versiya ilə əvəz edin.",
+    "noDeleteNotice": "Bu interfeysdə qeydləri silmək mümkün deyil. Bu, auditlərdə istinad edilən mənbə və tələbləri qoruyur; yeni versiya yaradın və ya köhnəlmiş qeydi belə işarələyin.",
+    "sourceCount": "Mənbələr",
+    "requirementCount": "Tələblər",
+    "save": "Yadda saxla",
+    "saving": "Yadda saxlanılır…",
+    "add": "Əlavə et",
+    "adding": "Əlavə olunur…",
+    "transition": "Yoxlama statusunu yenilə",
+    "reviewNote": "Rəy qeydi (məcburidir)",
+    "emptyDate": "Qeyd edilməyib",
+    "fields": {
+      "code": "Daxili mənbə kodu",
+      "title": "Sənədin adı",
+      "issuer": "Qəbul edən orqan",
+      "sourceUrl": "Rəsmi mənbə URL-i",
+      "kind": "Mənbə növü",
+      "language": "Sənədin dili",
+      "versionLabel": "Versiya etiketi",
+      "decisionNumber": "Qərar/nəşr nömrəsi (təsdiqlənibsə)",
+      "decisionDate": "Nəşr və ya qərar tarixi (təsdiqlənibsə)",
+      "effectiveFrom": "Qüvvəyə minmə tarixi (təsdiqlənibsə)",
+      "effectiveTo": "Qüvvədən düşmə tarixi (təsdiqlənibsə)",
+      "clauseId": "Müddəa və ya bənd istinadı",
+      "section": "Bölmə",
+      "topic": "Mövzu",
+      "textOriginal": "Müddəanın orijinal mətni",
+      "textTranslation": "Tərcümə edilmiş mətn",
+      "translationLabel": "Tərcümə etiketi",
+      "translationSource": "Tərcümə mənbəyi",
+      "applicability": "Tətbiqolunma (mənbədə göstərildiyi kimi)",
+      "requirementType": "Tələb növü"
+    },
+    "sourceKinds": {
+      "MANDATORY_LAW": "Məcburi qanun və ya normativ akt",
+      "OPTIONAL_FRAMEWORK": "Könüllü çərçivə"
+    },
+    "languages": {
+      "az": "Azərbaycan dili",
+      "en": "İngilis dili"
+    },
+    "requirementTypes": {
+      "MANDATORY_LAW": "Məcburi qanun",
+      "OPTIONAL_FRAMEWORK": "Könüllü çərçivə"
+    },
+    "actions": {
+      "PENDING_VERIFICATION": "Yoxlama gözləyir",
+      "UNDER_LEGAL_REVIEW": "Hüquqi baxışdadır",
+      "VERIFIED": "Təsdiqlənib",
+      "SUPERSEDED": "Əvəz edilib",
+      "saved": "Dəyişikliklər yadda saxlanıldı.",
+      "statusUpdated": "Yoxlama statusu və rəy tarixçəsi yeniləndi.",
+      "invalidInput": "Bəzi sahələr yanlışdır. Dəyərləri yoxlayıb yenidən cəhd edin.",
+      "duplicate": "Bu mənbə kodu, versiya etiketi və ya bənd istinadı artıq mövcuddur.",
+      "notFound": "Bu qeyd artıq mövcud deyil. Səhifəni yeniləyib yenidən cəhd edin.",
+      "invalidTransition": "Bu yoxlama statusu keçidinə icazə verilmir.",
+      "recordLocked": "Bu qeyd cari yoxlama statusunda redaktə üçün kilidlənib.",
+      "noTransition": "Əlavə status dəyişikliyi mümkün deyil."
+    }
+  },
   "dashboard": {
     "title": "İdarə paneli",
     "subtitle": "Normativ yoxlama və audit gedişatına ümumi baxış.",

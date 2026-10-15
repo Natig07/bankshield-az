@@ -32,6 +32,7 @@ src/
       login/           bilingual public login page and Server Action
       forbidden/       localized access-denied page
       (app)/           authenticated shell and protected pages/actions
+        regulatory/    database-backed sources, versions, requirements, review actions
       actions.ts       logout Server Action
     api/health/        liveness probe, returns no data
     globals.css        design tokens (navy, teal, light surfaces)
@@ -40,7 +41,7 @@ src/
   lib/
     auth/              Argon2id, database sessions, DAL, RBAC, scoped access
     domain/            enums, risk scoring, assessment rules (pure, unit-tested)
-    regulatory/        source registry metadata (no clause text)
+    regulatory/        validated source/version/requirement mutations and verification workflow
   proxy.ts             locale redirect only
 prisma/schema.prisma   data model
 storage-local/         private evidence directory (gitignored, never web-served)
@@ -72,6 +73,7 @@ storage-local/         private evidence directory (gitignored, never web-served)
   | Read-Only Reviewer | Regulatory, permitted audit, evidence, controls, findings, reports | None |
 
   Every role requires `application:access`. Only administrators receive `application:manage`, `regulatory:manage`, and `users:manage`. Non-administrators must be the engagement creator or an assigned `AuditEngagementMember` for engagement-bound data.
+- Regulatory source/version/requirement changes are Server Actions guarded by `regulatory:manage` and validated server-side. New versions and requirements start pending. Verification transitions require a note and append a `VerificationEvent`; a requirement cannot be verified before its parent version. Version and requirement text is locked once review begins, and verified text is superseded through a new version rather than overwritten. There is no delete action; schema restrictions protect referenced history.
 - Audit events never contain passwords, tokens or document contents.
 - Evidence: validate real file type, extension and size; generate internal storage keys; store outside `public/` under `EVIDENCE_STORAGE_DIR`; SHA-256 on write; files served only through an authorized handler; never executed or rendered as HTML; behind a small storage interface so it can be replaced.
 - No evidence is sent to any external service.
@@ -81,7 +83,7 @@ storage-local/         private evidence directory (gitignored, never web-served)
 Defined in `prisma/schema.prisma`. Authentication adds `Session` (token hash, user, expiry) and `BootstrapState` (durable one-time bootstrap marker); existing compliance models and `User` credential/lockout fields are preserved.
 
 - Enum-like fields are plain `String` columns; allowed values live in `src/lib/domain/enums.ts` and are enforced with Zod. This keeps the move to PostgreSQL or SQL Server simple.
-- History is kept by inserting rows: `ControlAssessment` versions (`isCurrent`), `AuditFindingHistory` snapshots, `VerificationEvent` log, evidence replacement chain (`replacesId`).
+- History is kept by inserting rows: `ControlAssessment` versions (`isCurrent`), `AuditFindingHistory` snapshots, `VerificationEvent` log (including regulatory status transitions and review notes), evidence replacement chain (`replacesId`).
 - History-bearing relations use `onDelete: Restrict` so approved records cannot disappear through cascades.
 - Regulatory chain: `RegulatoryDocument` → `RegulatoryVersion` (decision number, dates, verification status) → `RegulatoryRequirement` (clause id, original text, separate translation, applicability, type, verification status, `isDemo`). `RequirementControlMapping` is many-to-many.
 - Audit chain: `AuditEngagement` (+ `AuditEngagementMember` for assigned auditors and access checks) → `AuditScopeItem` → `ControlAssessment`.

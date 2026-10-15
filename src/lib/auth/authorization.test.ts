@@ -53,6 +53,18 @@ test("read-only reviewer has no mutation or administration permissions", () => {
   }
   assert.equal(hasPermission("READ_ONLY_REVIEWER", "audit:read"), true);
   assert.equal(hasPermission("READ_ONLY_REVIEWER", "reports:read"), true);
+  assert.equal(hasPermission("READ_ONLY_REVIEWER", "regulatory:manage"), false);
+});
+
+test("regulatory mutations are administrator-only", () => {
+  assert.equal(hasPermission("ADMINISTRATOR", "regulatory:manage"), true);
+  assert.equal(hasPermission("AUDITOR", "regulatory:manage"), false);
+  assert.equal(hasPermission("SECURITY_ANALYST", "regulatory:manage"), false);
+  assert.equal(hasPermission("READ_ONLY_REVIEWER", "regulatory:manage"), false);
+  assert.throws(
+    () => assertRolePermission("READ_ONLY_REVIEWER", "regulatory:manage"),
+    PermissionDeniedError,
+  );
 });
 
 test("server authorization denies unauthenticated and unauthorized roles", () => {

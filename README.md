@@ -6,7 +6,7 @@ Bilingual (Azerbaijani and English) cybersecurity compliance and audit support p
 
 ## Current state
 
-The bilingual UI now requires an active account to access the application. Login and logout use Argon2id password verification and revocable SQLite-backed sessions. Administrators can create users, assign roles, and disable accounts. Existing compliance sections remain placeholders; AI analysis, evidence uploads, and assessment workflows are not implemented.
+The bilingual UI now requires an active account to access the application. Login and logout use Argon2id password verification and revocable SQLite-backed sessions. Administrators can create users, assign roles, and disable accounts. The Regulatory Library supports source, version, and requirement maintenance with review history. Audit/assessment workflows, evidence uploads, and AI analysis are not implemented.
 
 ## Run it locally
 
@@ -86,6 +86,14 @@ Every application page checks its permission on the server. Every current mutati
 Login lockout triggers after five failed passwords for the same account and lasts 15 minutes. This reduces repeated targeted attempts; deployments exposed beyond a trusted internal network should also apply request-rate limits at their trusted reverse proxy/firewall.
 
 To test the UI locally after creating the administrator, sign in at `/az/login` or `/en/login`; use the header's sign-out action to invalidate that session. The admin page is available to administrators at `/az/admin` and `/en/admin`.
+
+## Regulatory Library
+
+The Regulatory Library reads source documents, versions, requirements, and verification history from SQLite. Administrators can add or edit source metadata, append source versions, and add or edit requirement records. New versions and requirements always start `PENDING_VERIFICATION`; verification changes require a non-empty review note and are written to `VerificationEvent`. The allowed path is pending → legal review → verified, with a return to pending from legal review and superseding verified records. Requirements cannot be marked verified until their parent version is verified.
+
+Version and requirement content becomes read-only once legal review starts; return it to pending with a review note before correcting it. Create a new version rather than overwriting verified content. The interface has no delete operation, protecting source records referenced by existing audit records. Enter only information checked against the authoritative source. Unknown dates, applicability, or clause text should be left blank. Do not treat a translation as official unless its label and provenance are recorded.
+
+Only Administrators have `regulatory:manage`; all other roles can read the library but cannot mutate records. This policy is enforced by every Server Action, independently of whether controls are shown in the UI.
 
 ## Project documents
 

@@ -1,5 +1,31 @@
 # PROGRESS.md
 
+## Regulatory Library maintenance (2026-10-15) — IMPLEMENTED; OPERATOR UI VERIFICATION PENDING
+
+### Existing state verified before implementation
+- The Regulatory Library route was only a read-authorized `SectionPlaceholder`. There were no source/requirement mutations, regulatory API routes, or Server Actions. The existing schema already contained `RegulatoryDocument`, `RegulatoryVersion`, `RegulatoryRequirement`, and `VerificationEvent`; no migration or generated client change was needed.
+- The existing `regulatory:manage` permission was already granted only to `ADMINISTRATOR`. The new mutation Server Actions each require it server-side; read-only roles still receive `regulatory:read` only.
+- Read-only check of `data/dev.db` found 2 users, 1 active administrator, 1 initial-bootstrap marker, and 1 unexpired session. **Zero unexpired sessions belong to the active administrator**; the unexpired session is associated with another account. Do not rerun bootstrap: the administrator and marker exist, and the secure bootstrap must refuse. A browser appearing signed in as the admin may be using a different database/server or a stale/different account session. Confirm the running server's `DATABASE_URL`, restart it, and sign in again with the existing administrator credentials; do not reset or recreate the database.
+
+### Implemented
+- Replaced the regulatory placeholder with database-backed source, version, requirement, and review-history display. Administrators can create/edit source metadata; append/edit versions; create/edit provisions; and transition verification status. No records can be deleted from the UI or actions.
+- Newly created source versions and requirements are always pending verification. Optional legal details/dates remain blank unless known. HTTP(S) official URLs, date validity/ranges, field lengths, enumerated source and requirement types, unique code/version/clause constraints, and parent-record existence are validated.
+- Status changes require a review note and append `VerificationEvent` with the actor ID and from/to statuses. Requirements cannot be marked verified until their parent version is verified. Transitions are pending → legal review → verified, legal review → pending, and verified → superseded. Version/requirement content locks once review begins; corrections require returning to pending with a note. Verified material should instead be maintained as a new version.
+- Version and requirement delete operations were deliberately omitted. Existing schema `Restrict` relations also prevent deleting records referenced by audit data. Legal text, applicability, decision numbers, and dates are not generated or scraped.
+- Added bilingual forms and feedback in `src/app/[lang]/(app)/regulatory/regulatory-library.tsx` and `src/i18n/dictionaries/{az,en}.json`; documented workflow in README.md.
+
+### Verification actually run
+- `npm test` — passed: 39 tests / 6 suites, 0 failures, including source/requirement creation, duplicate code/version/clause handling, invalid URL/date/range validation, pending defaults, review transitions/history, edit locks, and RBAC denial for non-administrators.
+- `npm run typecheck`, `npm run lint`, `npm run build`, and `npx prisma validate` — passed.
+- Regulatory lifecycle tests use isolated migrated SQLite files. The real `data/dev.db` was queried read-only for account/session state and was not changed.
+- The authenticated regulatory page and Server Action flow were not exercised in a browser because no active administrator session exists for this database. Operator sign-in/UI verification remains outstanding.
+
+### Files changed
+- Added `src/lib/regulatory/service.ts`, `workflow.ts`, and isolated integration tests in `service.test.ts`.
+- Replaced the regulatory placeholder page; added `regulatory-library.tsx` and `actions.ts`.
+- Updated authorization tests, English/Azerbaijani dictionaries, README.md, PROGRESS.md, and NEXT_STEPS.md.
+- No Prisma schema, migration, dependency, `.env`, or database changes.
+
 ## Dashboard: live SQLite data (2026-10-15) — IMPLEMENTED AND VERIFIED
 
 ### Diagnosis and changes
@@ -20,7 +46,7 @@
 
 ### Remaining
 - Existing application modules are still placeholders; live counts do not imply the assessment, evidence, reporting, or AI workflows are implemented.
-- Authentication code already exists in this repository from the prior phase. This task made no authentication changes. The local database still has zero users, so the documented one-time bootstrap is required before an operator can sign in and view the protected dashboard.
+- Authentication code already exists in this repository from the prior phase. This task made no authentication changes. The current database has an active administrator but no unexpired session for that administrator; do not rerun the one-time bootstrap. Sign in against the same database after confirming the running server configuration.
 
 ## Phase 2: Secure authentication and authorization (2026-10-15) — IMPLEMENTED AND VERIFIED
 
