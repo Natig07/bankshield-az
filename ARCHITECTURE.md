@@ -33,6 +33,7 @@ src/
       forbidden/       localized access-denied page
       (app)/           authenticated shell and protected pages/actions
         regulatory/    database-backed sources, versions, requirements, review actions
+        audits/        scoped engagement list/detail, metadata and scope actions
       actions.ts       logout Server Action
     api/health/        liveness probe, returns no data
     globals.css        design tokens (navy, teal, light surfaces)
@@ -40,6 +41,7 @@ src/
   i18n/                config, dictionaries (az.json, en.json), server helpers
   lib/
     auth/              Argon2id, database sessions, DAL, RBAC, scoped access
+    audits/            validated engagement workflow, scope selection and queries
     domain/            enums, risk scoring, assessment rules (pure, unit-tested)
     regulatory/        validated source/version/requirement mutations and verification workflow
   proxy.ts             locale redirect only
@@ -58,7 +60,7 @@ storage-local/         private evidence directory (gitignored, never web-served)
 ## Security model
 
 - `proxy.ts` does locale routing only. It is not an authorization layer.
-- **Authorization is enforced on the server.** The authenticated route group verifies every page, page handlers require their specific permission, and all current mutating Server Actions call `requirePermission`. Future handlers for engagement records must also use `requireEngagementPermission`; it requires creator or `AuditEngagementMember` access except for administrators. Hiding UI is never the control.
+- **Authorization is enforced on the server.** The authenticated route group verifies every page, page handlers require their specific permission, and all current mutating Server Actions call `requirePermission`. Engagement mutations additionally call `requireEngagementPermission`; non-administrators must be the creator or a current `AuditEngagementMember`. Hiding UI is never the control.
 - Security headers are set in `next.config.ts` (nosniff, frame deny, referrer policy, permissions policy). A Content-Security-Policy is a Phase 7 item.
 - Authentication follows the Next.js 16 guidance to centralize data access and authorization in a server-side DAL; Next Server Actions provide their built-in same-origin/Origin CSRF checks. Passwords use `@node-rs/argon2` (Argon2id). Sessions are 256-bit random opaque cookies; only SHA-256 token hashes are stored in the database. The `__Host-` cookie is Secure/HttpOnly/SameSite=Strict in production; local development uses a non-Secure HttpOnly cookie on loopback. Sessions expire after eight hours and are invalidated on logout, role change, account disable, or expiry. A signing secret is not needed because the opaque token has 256 bits of randomness and is verified against the database.
 - The external auth-library approach was not selected: the existing `User` model already supplies local passwords, lockout and roles, while the deployment needs a one-time CLI bootstrap and immediately revocable database sessions. Session, role and password behavior remains explicit and covered by tests; this is custom auth code and therefore merits a dedicated production security review before external exposure.
@@ -74,16 +76,19 @@ storage-local/         private evidence directory (gitignored, never web-served)
 
   Every role requires `application:access`. Only administrators receive `application:manage`, `regulatory:manage`, and `users:manage`. Non-administrators must be the engagement creator or an assigned `AuditEngagementMember` for engagement-bound data.
 - Regulatory source/version/requirement changes are Server Actions guarded by `regulatory:manage` and validated server-side. New versions and requirements start pending. Verification transitions require a note and append a `VerificationEvent`; a requirement cannot be verified before its parent version. Version and requirement text is locked once review begins, and verified text is superseded through a new version rather than overwritten. There is no delete action; schema restrictions protect referenced history.
+- Engagement creation/editing, requirement selection, auditor assignment, and status changes use server-side validation and the engagement-scoped authorization DAL. The workflow status graph is `DRAFT → IN_PROGRESS → IN_REVIEW → APPROVED → ARCHIVED`, with `IN_REVIEW → IN_PROGRESS` and early archive transitions. Status, metadata, auditor assignments, and scope selections append `AuditEvent` records. Auditor changes are Administrator-only; `createdById` is immutable.
+- Selecting a regulatory requirement creates an `AuditRequirementSelection` that snapshots the requirement verification state, actor, time, acknowledgement, and decision note. Selection of any non-`VERIFIED` requirement requires an explicit acknowledgement and note. Existing `RequirementControlMapping` rows are converted into `AuditScopeItem` rows where available. Selection does not imply legal authority or applicability.
+- Audit list/detail queries filter to Administrators or the engagement creator/current assigned auditor. Unknown or out-of-scope detail IDs resolve to not found. Search, status filtering, loading skeletons, empty states, and safe database-error responses are provided. Assessment progress, finding, and evidence figures are summaries only; assessment entry, evidence workflows, and AI analysis are not implemented.
 - Audit events never contain passwords, tokens or document contents.
 - Evidence: validate real file type, extension and size; generate internal storage keys; store outside `public/` under `EVIDENCE_STORAGE_DIR`; SHA-256 on write; files served only through an authorized handler; never executed or rendered as HTML; behind a small storage interface so it can be replaced.
 - No evidence is sent to any external service.
 
 ## Data model
 
-Defined in `prisma/schema.prisma`. Authentication adds `Session` (token hash, user, expiry) and `BootstrapState` (durable one-time bootstrap marker); existing compliance models and `User` credential/lockout fields are preserved.
+Defined in `prisma/schema.prisma`. Authentication adds `Session` (token hash, user, expiry) and `BootstrapState` (durable one-time bootstrap marker); the engagement workflow adds `auditedOrganization` and `AuditRequirementSelection`. Existing engagement, assessment, finding, and evidence records are preserved by the additive migration.
 
 - Enum-like fields are plain `String` columns; allowed values live in `src/lib/domain/enums.ts` and are enforced with Zod. This keeps the move to PostgreSQL or SQL Server simple.
-- History is kept by inserting rows: `ControlAssessment` versions (`isCurrent`), `AuditFindingHistory` snapshots, `VerificationEvent` log (including regulatory status transitions and review notes), evidence replacement chain (`replacesId`).
+- History is kept by inserting rows: `ControlAssessment` versions (`isCurrent`), `AuditFindingHistory` snapshots, `VerificationEvent` log (including regulatory status transitions and review notes), evidence replacement chain (`replacesId`), requirement-selection decisions, and `AuditEvent` activity.
 - History-bearing relations use `onDelete: Restrict` so approved records cannot disappear through cascades.
 - Regulatory chain: `RegulatoryDocument` → `RegulatoryVersion` (decision number, dates, verification status) → `RegulatoryRequirement` (clause id, original text, separate translation, applicability, type, verification status, `isDemo`). `RequirementControlMapping` is many-to-many.
 - Audit chain: `AuditEngagement` (+ `AuditEngagementMember` for assigned auditors and access checks) → `AuditScopeItem` → `ControlAssessment`.
@@ -152,4 +157,4 @@ erDiagram
 
 The generated client is used through `src/lib/db.ts` and `@prisma/adapter-better-sqlite3` 7.10.0. Authentication adds `Session` and `BootstrapState` in the migration `20261015014139_authentication`; it preserves the existing `User` columns and compliance schema. No default account is seeded. A one-time local CLI bootstrap creates the initial administrator, and no `SESSION_SECRET` is used or required.
 
-Authentication tests migrate a unique temporary SQLite database and delete only their own test directory. They do not use or reset `data/dev.db`.
+Authentication, regulatory, and engagement tests migrate unique temporary SQLite databases and delete only their own test directories. They do not use or reset `data/dev.db`.

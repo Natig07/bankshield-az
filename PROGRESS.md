@@ -1,5 +1,30 @@
 # PROGRESS.md
 
+## Audit Engagements workflow (2026-10-15) — IMPLEMENTED; AUTHENTICATED BROWSER VERIFICATION PENDING
+
+### Existing schema and permission decisions
+- Reused `AuditEngagement`, `AuditEngagementMember`, `AuditScopeItem`, `ControlAssessment`, `AuditFinding`, `EvidenceDocument`, `RequirementControlMapping`, and `AuditEvent`.
+- The existing schema had no audited-organisation field and `AuditScopeItem` could not record the inclusion decision for an unverified requirement. Added the audited-organisation field and an `AuditRequirementSelection` model with unique engagement/requirement assignment, actor, selection timestamp, verification status snapshot, acknowledgement flag, and decision note. The additive migration copies existing `AuditEngagement` columns and supplies `""` only for the new field on any existing row.
+- Permission boundary: list/detail read requires `audit:read`; every mutation calls `requirePermission("audit:manage")` or `requireEngagementPermission(..., "audit:manage")`. Admins see all engagements; other readers see only engagements they created or belong to as an assigned member. Non-admin creators can assign only themselves; an Administrator may select/reassign an active Auditor. The creator is never editable.
+
+### Implemented
+- Replaced the audit placeholder with the database-backed list and detail routes. The list supports title/organisation search, status filtering, explicit empty/error states, and Next loading skeletons. Details show engagement metadata, assigned auditor(s), selected requirements with source/clause/topic/current verification status, assessment scope progress, finding counts, evidence counts, and the latest engagement `AuditEvent` activity.
+- Create/edit validates required text, real calendar dates, and period ordering. Metadata edits do not delete or rewrite assessments, findings, evidence, or scope history. Assignment and supported status changes are separately guarded and audited.
+- Allowed status graph: Draft → In progress → In review → Approved → Archived, with In review → In progress and Draft/In progress → Archived. Invalid transitions fail. Approval actor/time are recorded and retained when an approved engagement is archived.
+- Requirement selection excludes demo requirements, prevents duplicates, and rechecks verification state inside a database transaction. Any status other than `VERIFIED` requires a checked explicit acknowledgement and a decision note. The selection records its original verification state; it does not represent legal confirmation or applicability. Existing `RequirementControlMapping` entries create missing `AuditScopeItem` records for assessment progress. No requirement selection is silently presented as confirmed law.
+- No AI work was started. Assessment editing/approval, evidence uploading, and report generation remain out of scope.
+
+### Migration and database safety
+- Added `prisma/migrations/20261015124511_audit_engagement_workflow/migration.sql`; applied it using `npx prisma migrate deploy`. Prisma reported all migrations successfully applied, and `npx prisma migrate status` reported the database schema up to date.
+- `npx prisma generate` succeeded with Prisma 7.10.0. A read-only query through the application's adapter against `.env`'s database returned 0 engagements, 0 requirement selections, and 0 engagement audit events. No reset command, seed, fake engagement, or fabricated regulatory content was used. Tests use isolated temporary SQLite databases; the real `data/dev.db` was not seeded.
+
+### Verification
+- Full suite: **47 tests passed, 0 failed** (includes new isolated audit integration tests). Coverage includes engagement create and required-field/date validation, allowed and denied status transitions, approval history retention, auditor role validation/reassignment, requirement selection acknowledgement and duplicate handling, mapped scope creation, list search/filter/empty state, engagement visibility restrictions, and database errors propagating instead of returning empty lists.
+- `npm run typecheck`, `npm run lint`, `npx prisma validate`, and `npx prisma migrate status` passed.
+- `npm run build` — passed with the audit list and dynamic detail route included.
+- Production smoke check — `/api/health` returned HTTP 200; an unauthenticated request to `/az/audits` returned HTTP 307 to `/az/login`. This verified server startup and route protection, not the signed-in workflow.
+- No authenticated browser testing was performed. The current local DB previously had an Administrator but no unexpired Administrator session; test behavior and pages were validated through isolated DB tests and compilation.
+
 ## Regulatory Library maintenance (2026-10-15) — IMPLEMENTED; OPERATOR UI VERIFICATION PENDING
 
 ### Existing state verified before implementation

@@ -1,6 +1,16 @@
 # NEXT_STEPS.md
 
-Resume point for a fresh session. The authenticated dashboard reads live SQLite data, and the Regulatory Library now supports maintaining source/version/requirement records with review history. Authentication remains implemented; no auth or database migration changes were made in the latest work.
+Resume point for a fresh session. The authenticated dashboard reads live SQLite data, the Regulatory Library supports source/version/requirement maintenance, and the Audit Engagements workflow is database-backed. Authentication remains implemented.
+
+## Current milestone: Audit Engagements
+
+- The engagement list/detail uses actual SQLite data with search, status filters, server error states, and framework loading states. Visibility is restricted to Administrators or the engagement creator/current assigned auditor.
+- Administrators and Auditors with `audit:manage` can create and edit permitted engagement metadata and change supported statuses. The creator is immutable; only Administrators can reassign the active Auditor. Mutations require permission and engagement access in every Server Action.
+- Requirement selection stores actor, selection time, the requirement verification state at selection, and the required explicit acknowledgement/note for non-verified content. Existing requirement-to-control mappings create assessment scope items where available. The page summarizes current assessment statuses, findings, evidence, and audit events; it does not implement assessment entry.
+- Additive migration `20261015124511_audit_engagement_workflow` has been applied and Prisma client regenerated. Existing engagement data is retained; the new organisation field defaults empty for prior rows. No reset or fabricated data was used.
+- A read-only Prisma query using the application's `.env` configuration verified the new tables; the development database currently has 0 engagements, 0 requirement selections, and 0 engagement audit events.
+- `npm test` (47 passed), `npm run typecheck`, `npm run lint`, `npx prisma validate`, `npx prisma migrate status`, and `npm run build` all passed. An HTTP smoke check got health 200 and the expected unauthenticated audit-page redirect (307 to login); no authenticated browser workflow was tested.
+- Manual browser verification: sign in as Administrator (do not rerun bootstrap); ensure an active Auditor account exists; create an engagement with valid dates and assign that Auditor; edit its metadata and progress status through the allowed transitions; reassign it as Administrator; select a verified requirement and a pending one with the acknowledgement and note; confirm the source/status snapshot, mapped scope progress, event history, and evidence/finding summaries. Sign in as the assigned Auditor to confirm access, then as a read-only user outside the engagement to confirm the detail route is unavailable and mutation attempts are denied.
 
 ## 1. Regulatory Library workflow
 
@@ -32,7 +42,7 @@ Resume point for a fresh session. The authenticated dashboard reads live SQLite 
 - No MFA, password reset/recovery, or built-in per-IP/distributed login throttle. Apply trusted proxy/firewall limits if exposed beyond the private on-prem network.
 - Custom authentication code has not received an independent production security review. Verify reverse-proxy forwarding headers and production HTTPS/cookie behavior before deployment.
 - `npm audit --omit=dev` reported four high advisories in Prisma's `deepmerge-ts` / `mysql2` dependency chain. A breaking Prisma downgrade was not applied; review on a safe, compatible Prisma update.
-- Audit engagements/assessments, evidence uploads, reporting, and AI workflows are still placeholders. Any future data operation must use centralized server-side permissions and engagement-scoped access; hiding UI controls is not an authorization check. Operator verification of the new Regulatory Library through an administrator session is also outstanding.
+- Control assessment entry/approval, evidence uploads, reporting, and AI workflows are still placeholders. Any future data operation must use centralized server-side permissions and engagement-scoped access; hiding UI controls is not an authorization check. Operator verification of the Regulatory Library and Audit Engagements through an administrator session is still outstanding.
 - Continue the verification checklist in REGULATORY_SOURCES.md; no regulatory item is verified without a named reviewer. Have a native speaker review the Azerbaijani dictionary.
 
 ## 5. Before further changes

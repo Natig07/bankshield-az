@@ -36,6 +36,7 @@ model User {
 
   engagementsCreated AuditEngagement[]       @relation("EngagementCreator")
   memberships        AuditEngagementMember[]
+  scopeSelections    AuditRequirementSelection[]
   events             AuditEvent[]
   sessions           Session[]
 
@@ -127,6 +128,7 @@ model RegulatoryRequirement {
 
   version      RegulatoryVersion           @relation(fields: [versionId], references: [id], onDelete: Restrict)
   mappings     RequirementControlMapping[]
+  scopeSelections AuditRequirementSelection[]
   scopeItems   AuditScopeItem[]
   suggestions  AISuggestion[]
   findings     AuditFinding[]
@@ -192,11 +194,12 @@ model RequirementControlMapping {
 // ───────────────────── Audit engagements ─────────────────────
 
 model AuditEngagement {
-  id          String    @id @default(cuid())
-  title       String
-  scope       String
-  periodStart DateTime
-  periodEnd   DateTime
+  id                  String    @id @default(cuid())
+  title               String
+  auditedOrganization String @default("")
+  scope               String
+  periodStart         DateTime
+  periodEnd           DateTime
   // DRAFT | IN_PROGRESS | IN_REVIEW | APPROVED | ARCHIVED
   status      String    @default("DRAFT")
   createdById String
@@ -205,15 +208,37 @@ model AuditEngagement {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
-  createdBy User                    @relation("EngagementCreator", fields: [createdById], references: [id], onDelete: Restrict)
-  members   AuditEngagementMember[]
-  scopeItems AuditScopeItem[]
-  evidence  EvidenceDocument[]
-  findings  AuditFinding[]
-  reports   ReportRecord[]
-  aiRuns    AIAnalysisRun[]
+  createdBy             User                       @relation("EngagementCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  members               AuditEngagementMember[]
+  requirementSelections AuditRequirementSelection[]
+  scopeItems            AuditScopeItem[]
+  evidence              EvidenceDocument[]
+  findings              AuditFinding[]
+  reports               ReportRecord[]
+  aiRuns                AIAnalysisRun[]
 
   @@index([status])
+}
+
+// Explicit record that a requirement was selected for this engagement. Selection
+// captures the verification state and acknowledgement as of the decision time.
+model AuditRequirementSelection {
+  id                           String   @id @default(cuid())
+  engagementId                 String
+  requirementId                String
+  selectedById                 String
+  selectedAt                    DateTime @default(now())
+  verificationStatusAtSelection String
+  unverifiedAcknowledged        Boolean  @default(false)
+  decisionNote                  String?
+
+  engagement  AuditEngagement       @relation(fields: [engagementId], references: [id], onDelete: Restrict)
+  requirement RegulatoryRequirement @relation(fields: [requirementId], references: [id], onDelete: Restrict)
+  selectedBy  User                  @relation(fields: [selectedById], references: [id], onDelete: Restrict)
+
+  @@unique([engagementId, requirementId])
+  @@index([requirementId])
+  @@index([selectedById])
 }
 
 // Assigned auditors; also the basis for cross-engagement access checks.
