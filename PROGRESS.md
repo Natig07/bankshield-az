@@ -1,5 +1,30 @@
 # PROGRESS.md
 
+# Security Controls and Assessment Workflow (2026-10-15) — IMPLEMENTED; AUTHENTICATED BROWSER VERIFICATION PENDING
+
+### Implemented
+- Added a searchable, database-backed Security Controls catalogue. Administrators can create and update non-demo control records and add requirement mappings with a required rationale. Duplicate codes and mappings are rejected by both validation and existing unique constraints.
+- Control catalogue/mapping mutations require the new `controls:manage` permission, granted only to Administrators. Auditor, Security Analyst, and Read-Only Reviewer retain read access; only roles already permitted `controls:assess` can assess.
+- Mapping additions are append-only in the UI; no delete/deactivation is offered because the existing mapping schema has no history/deactivation state and cascades on related deletion. Existing engagement scope is not rewritten when mappings change. Regulatory verification statuses are read and recorded in audit event details but never changed by mapping actions.
+- Engagement detail pages now show control/requirement provenance, pending verification warnings, assessment revisions, approval state, and assessment-specific evidence metadata. Assessment creation/revision and approval require `controls:assess` plus engagement membership/access. Revisions append new `ControlAssessment` rows; previous approval/status/evidence history is retained.
+- `NOT_APPLICABLE` assessments require a reason. Approval uses the existing server-side `validateApproval` rules: `NOT_TESTED` is rejected, reviewer justification is required, and at least one linked evidence record is required except for `NOT_APPLICABLE`. Assessment status changes occur only by creating a new revision; approved rows are not edited in place except for the current-revision marker.
+- Evidence selection is limited to existing metadata records on that engagement and either unscoped or linked to the assessed control. No file upload, file read, public access, or storage shortcut was added. Evidence storage remains a separate unimplemented phase.
+- Important catalogue, mapping, assessment, and approval changes append `AuditEvent` entries. Assessment events are associated with their engagement activity stream.
+- The existing assessment rules do not define independent maker-checker approval, so the same permitted assessor may approve their own assessment. Add a reviewer-separation policy only after that product rule is explicitly agreed.
+
+### Schema and migration
+- Reused `CybersecurityControl`, `RequirementControlMapping`, `RegulatoryRequirement`, `AuditScopeItem`, `ControlAssessment`, `EvidenceDocument`, and `AuditEvent`.
+- Added `ControlAssessmentEvidence` as the minimal assessment-specific evidence join, including the linking actor and timestamp. This was necessary because `EvidenceDocument.controlId` only links evidence to an optional control and did not identify which assessment revision it supports.
+- Added migration `20261015191722_control_assessment_evidence`. It creates the join table and a SQLite partial unique index on `ControlAssessment(scopeItemId)` where `isCurrent = 1`, allowing unlimited historical revisions while database-enforcing at most one current revision. Before applying, `npx prisma migrate status` showed this single pending migration and a read-only check found no duplicate current assessments. `npx prisma migrate dev` applied it without reset; `npx prisma migrate status` then reported the schema up to date.
+- `npx prisma generate` succeeded. A read-only query through the application's Prisma client/SQLite adapter against `data/dev.db` succeeded; controls, scope items, assessments, and assessment-evidence links all currently have 0 records. No application data was seeded or changed.
+
+### Verification
+- Added isolated temporary-SQLite integration coverage for empty/populated searchable catalogue results, control create/update and duplicate code rejection, read-only mutation denial, mapping rationale/duplicate/verification-state preservation, assessment validation and revision history, evidence linkage/scope, approval rules, engagement scope/access, concurrency (exactly one current revision), and database errors.
+- Focused controls/assessment tests: **8 passed, 0 failed**.
+- Full `npm test`: **56 passed, 0 failed**.
+- `npm run typecheck`, `npm run lint`, `npx prisma validate`, `npx prisma migrate status`, `npx prisma generate`, `npx prisma migrate dev`, and `npm run build` passed.
+- No authenticated browser testing was performed. Manually verify as Administrator, Auditor, Security Analyst, and Read-Only Reviewer: create/edit a control; map a pending requirement and confirm its verification state is unchanged; select a mapped requirement in a new engagement; record a test status and evidence selection; reject approval without justification/evidence or for `NOT_TESTED`; approve a documented assessment; create another revision and confirm the approved revision remains in history; confirm non-members cannot read or mutate the engagement.
+
 ## Audit Engagements workflow (2026-10-15) — IMPLEMENTED; AUTHENTICATED BROWSER VERIFICATION PENDING
 
 ### Existing schema and permission decisions

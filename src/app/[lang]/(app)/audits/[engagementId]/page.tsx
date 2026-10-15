@@ -3,6 +3,7 @@ import { loadLocale } from "@/i18n/server";
 import { hasPermission } from "@/lib/auth/authorization";
 import { requirePagePermission } from "@/lib/auth/dal";
 import { getPrisma } from "@/lib/db";
+import { getEngagementAssessments } from "@/lib/controls/data";
 import {
   getEngagementDetails,
   getSelectableRequirements,
@@ -20,11 +21,12 @@ export default async function EngagementPage({
   let engagement: Awaited<ReturnType<typeof getEngagementDetails>> | undefined;
   let requirements: Awaited<ReturnType<typeof getSelectableRequirements>> = [];
   let auditors: { id: string; name: string; email: string }[] = [];
+  let assessmentData: Awaited<ReturnType<typeof getEngagementAssessments>> | undefined;
   try {
     const prisma = getPrisma();
     engagement = await getEngagementDetails(prisma, user, engagementId);
     if (engagement) {
-      [requirements, auditors] = await Promise.all([
+      [requirements, auditors, assessmentData] = await Promise.all([
         canManage ? getSelectableRequirements(prisma, engagementId) : Promise.resolve([]),
         user.role === "ADMINISTRATOR"
           ? prisma.user.findMany({
@@ -33,6 +35,7 @@ export default async function EngagementPage({
               select: { id: true, name: true, email: true },
             })
           : Promise.resolve([]),
+        getEngagementAssessments(prisma, user, engagementId),
       ]);
     }
   } catch (error) {
@@ -44,7 +47,7 @@ export default async function EngagementPage({
       </section>
     );
   }
-  if (!engagement) notFound();
+  if (!engagement || !assessmentData) notFound();
   return (
     <EngagementDetails
       lang={lang}
@@ -55,6 +58,28 @@ export default async function EngagementPage({
       auditors={auditors}
       canManage={canManage}
       canAssignAuditors={user.role === "ADMINISTRATOR"}
+      assessmentData={{
+        ...assessmentData,
+        evidence: assessmentData.evidence.map((record) => ({
+          ...record,
+          uploadedAt: record.uploadedAt.toISOString(),
+        })),
+        scopeItems: assessmentData.scopeItems.map((scopeItem) => ({
+          ...scopeItem,
+          assessments: scopeItem.assessments.map((assessment) => ({
+            ...assessment,
+            createdAt: assessment.createdAt.toISOString(),
+            approvedAt: assessment.approvedAt?.toISOString() ?? null,
+            evidenceLinks: assessment.evidenceLinks.map((link) => ({
+              ...link,
+              linkedAt: link.linkedAt.toISOString(),
+            })),
+          })),
+        })),
+      }}
+      assessmentLabels={dict.assessmentWorkflow}
+      assessmentStatuses={dict.dashboard.assessmentStatuses}
+      canAssess={hasPermission(user.role, "controls:assess")}
     />
   );
 }

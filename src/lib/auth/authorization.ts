@@ -17,6 +17,7 @@ export const PERMISSIONS = [
   "evidence:read",
   "evidence:manage",
   "controls:read",
+  "controls:manage",
   "controls:assess",
   "findings:read",
   "findings:manage",

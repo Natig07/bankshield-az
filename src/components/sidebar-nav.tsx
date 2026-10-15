@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   ClipboardList,
+  Shield,
   FileText,
   LayoutDashboard,
   Scale,
@@ -20,6 +21,7 @@ export interface NavLabels {
   dashboard: string;
   regulatory: string;
   audits: string;
+  controls: string;
   evidence: string;
   aiReview: string;
   findings: string;
@@ -31,6 +33,7 @@ const ITEMS = [
   { key: "dashboard", path: "", icon: LayoutDashboard },
   { key: "regulatory", path: "/regulatory", icon: Scale },
   { key: "audits", path: "/audits", icon: ClipboardList },
+  { key: "controls", path: "/controls", icon: Shield },
   { key: "evidence", path: "/evidence", icon: Files },
   { key: "aiReview", path: "/ai-review", icon: Sparkles },
   { key: "findings", path: "/findings", icon: TriangleAlert },
@@ -53,7 +56,13 @@ export function SidebarNav({
   return (
     <nav aria-label={ariaLabel} className="flex-1 overflow-y-auto px-3 py-4">
       <ul className="space-y-1">
-        {ITEMS.filter(({ key }) => key !== "admin" || hasPermission(role, "users:manage")).map(({ key, path, icon: Icon }) => {
+        {ITEMS.filter(({ key }) =>
+          key === "admin"
+            ? hasPermission(role, "users:manage")
+            : key === "controls"
+              ? hasPermission(role, "controls:read")
+              : true,
+        ).map(({ key, path, icon: Icon }) => {
           const href = `/${lang}${path}`;
           const active = path === "" ? pathname === href : pathname.startsWith(href);
           return (

@@ -8,6 +8,7 @@
     "dashboard": "Dashboard",
     "regulatory": "Regulatory Library",
     "audits": "Audit Engagements",
+    "controls": "Security Controls",
     "evidence": "Evidence",
     "aiReview": "AI Review",
     "findings": "Findings & Remediation",
@@ -89,6 +90,11 @@
       "title": "Audit Engagements",
       "description": "Create engagements, select scope, and assess controls with full assessment history.",
       "phase": "Phase 3"
+    },
+    "controls": {
+      "title": "Security Controls",
+      "description": "Maintain the control catalogue and human-reviewed links to regulatory requirements.",
+      "phase": "Phase 2"
     },
     "evidence": {
       "title": "Evidence",
@@ -260,7 +266,12 @@
       "AUDIT_ENGAGEMENT_UPDATED": "Engagement details updated",
       "AUDIT_ENGAGEMENT_STATUS_CHANGED": "Engagement status changed",
       "AUDIT_ENGAGEMENT_AUDITOR_ASSIGNED": "Auditor assigned",
-      "AUDIT_REQUIREMENT_SELECTED": "Requirement selected for scope"
+      "AUDIT_REQUIREMENT_SELECTED": "Requirement selected for scope",
+      "CONTROL_CREATED": "Control created",
+      "CONTROL_UPDATED": "Control updated",
+      "REQUIREMENT_CONTROL_MAPPED": "Requirement mapped to control",
+      "CONTROL_ASSESSMENT_REVISED": "Control assessment revised",
+      "CONTROL_ASSESSMENT_APPROVED": "Control assessment approved"
     },
     "errors": {
       "invalidInput": "Check the submitted values and try again.",
@@ -276,6 +287,96 @@
       "statusUpdated": "Engagement status updated.",
       "requirementSelected": "Requirement added to the engagement scope.",
       "auditorAssigned": "Auditor assignment updated."
+    }
+  },
+  "controlWorkflow": {
+    "description": "Manage control records and requirement mappings. A mapping is an internal rationale, not legal verification or a compliance conclusion.",
+    "search": "Search code, title, domain, or description",
+    "searchAction": "Search",
+    "noControls": "No security controls have been recorded.",
+    "noSearchResults": "No controls match this search.",
+    "createControl": "Add security control",
+    "editControl": "Edit control",
+    "saveControl": "Save control",
+    "saving": "Saving…",
+    "code": "Control code",
+    "title": "Control title",
+    "description": "Description",
+    "domain": "Domain",
+    "noDomain": "No domain recorded",
+    "source": "Control source",
+    "sourceLabels": {
+      "INTERNAL": "Internal",
+      "ISO_27001": "ISO 27001",
+      "NIST_CSF": "NIST CSF"
+    },
+    "mappedRequirements": "Mapped regulatory requirements",
+    "mappingCount": "Mappings",
+    "noMappings": "No requirements are mapped to this control.",
+    "addMapping": "Add requirement mapping",
+    "chooseRequirement": "Choose a requirement",
+    "noAvailableRequirements": "No unmapped requirements are available.",
+    "noTopic": "Topic not recorded",
+    "rationale": "Mapping rationale",
+    "mapRequirement": "Add mapping",
+    "pendingVerificationNotice": "Mapping does not verify or confirm the requirement. Its current verification status remains unchanged.",
+    "mappingHistoryNotice": "Mappings are append-only in this interface. They are not deleted or silently propagated into existing engagement scopes; use current mappings when selecting a requirement in a new engagement.",
+    "dataErrorTitle": "Control data is unavailable",
+    "dataErrorBody": "The application could not read control data. No records are shown; try again later or contact your system administrator.",
+    "errors": {
+      "invalidInput": "Check the submitted values and try again.",
+      "duplicateControl": "A control with this code already exists.",
+      "duplicateMapping": "This requirement is already mapped to the control.",
+      "notFound": "The selected record no longer exists.",
+      "invalidEvidence": "Choose evidence from this engagement that is relevant to the selected control.",
+      "approvalRejected": "The assessment does not meet the approval requirements. It needs a tested status, reviewer justification, and evidence unless it is not applicable.",
+      "invalidTransition": "This assessment is approved or no longer current and cannot be changed in place.",
+      "concurrentRevision": "Another revision was saved at the same time. Reload the engagement and try again."
+    },
+    "success": {
+      "saved": "Control saved.",
+      "mapped": "Requirement mapped. Its verification status was not changed.",
+      "assessmentSaved": "A new assessment revision was recorded.",
+      "approved": "Assessment approved and recorded in the audit history."
+    }
+  },
+  "assessmentWorkflow": {
+    "title": "Control assessments",
+    "emptyScope": "No mapped control scope items are available for assessment.",
+    "current": "Current",
+    "revision": "Revision",
+    "noHistory": "No assessment has been recorded.",
+    "assessed": "Assessment recorded",
+    "approved": "Approved",
+    "notApproved": "Not approved",
+    "notApplicableReason": "Reason the control is not applicable",
+    "newRevision": "Record a new revision",
+    "status": "Assessment status",
+    "evidence": "Evidence records for this engagement and control",
+    "noEvidence": "No eligible evidence record is available. Evidence upload/storage is not implemented in this phase.",
+    "evidenceHint": "Select only evidence that supports this revision. Evidence files are not opened or served here.",
+    "saveRevision": "Save revision",
+    "saving": "Saving…",
+    "approveAssessment": "Approve current assessment",
+    "justification": "Reviewer justification",
+    "approving": "Approving…",
+    "noAssessmentEvidence": "No evidence is linked to this assessment.",
+    "pendingRequirement": "The regulatory requirement is not verified; this assessment does not verify its legal status or applicability.",
+    "errors": {
+      "invalidInput": "Check the submitted values and try again.",
+      "duplicateControl": "A control with this code already exists.",
+      "duplicateMapping": "This requirement is already mapped to the control.",
+      "notFound": "The assessment or engagement is unavailable.",
+      "invalidEvidence": "The selected evidence does not belong to this engagement or control.",
+      "approvalRejected": "Approval requires a tested assessment, reviewer justification, and linked evidence unless the status is not applicable.",
+      "invalidTransition": "Only an unapproved current assessment can be approved.",
+      "concurrentRevision": "A concurrent revision was saved. Reload and try again."
+    },
+    "success": {
+      "saved": "Control saved.",
+      "mapped": "Requirement mapped.",
+      "assessmentSaved": "New assessment revision saved.",
+      "approved": "Assessment approved."
     }
   },
   "dashboard": {

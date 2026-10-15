@@ -1,23 +1,26 @@
 # NEXT_STEPS.md
 
-Resume point for a fresh session. The authenticated dashboard reads live SQLite data, the Regulatory Library supports source/version/requirement maintenance, and the Audit Engagements workflow is database-backed. Authentication remains implemented.
+Resume point for a fresh session. Authentication, the Regulatory Library, Audit Engagements, the searchable Security Controls catalogue, requirement mappings, and revisioned control assessments are implemented. The local SQLite schema is up to date. The authenticated UI still needs operator verification in a browser.
 
-## Current milestone: Audit Engagements
+## Current milestone: Security Controls and Assessment Workflow
 
-- The engagement list/detail uses actual SQLite data with search, status filters, server error states, and framework loading states. Visibility is restricted to Administrators or the engagement creator/current assigned auditor.
-- Administrators and Auditors with `audit:manage` can create and edit permitted engagement metadata and change supported statuses. The creator is immutable; only Administrators can reassign the active Auditor. Mutations require permission and engagement access in every Server Action.
-- Requirement selection stores actor, selection time, the requirement verification state at selection, and the required explicit acknowledgement/note for non-verified content. Existing requirement-to-control mappings create assessment scope items where available. The page summarizes current assessment statuses, findings, evidence, and audit events; it does not implement assessment entry.
-- Additive migration `20261015124511_audit_engagement_workflow` has been applied and Prisma client regenerated. Existing engagement data is retained; the new organisation field defaults empty for prior rows. No reset or fabricated data was used.
-- A read-only Prisma query using the application's `.env` configuration verified the new tables; the development database currently has 0 engagements, 0 requirement selections, and 0 engagement audit events.
-- `npm test` (47 passed), `npm run typecheck`, `npm run lint`, `npx prisma validate`, `npx prisma migrate status`, and `npm run build` all passed. An HTTP smoke check got health 200 and the expected unauthenticated audit-page redirect (307 to login); no authenticated browser workflow was tested.
-- Manual browser verification: sign in as Administrator (do not rerun bootstrap); ensure an active Auditor account exists; create an engagement with valid dates and assign that Auditor; edit its metadata and progress status through the allowed transitions; reassign it as Administrator; select a verified requirement and a pending one with the acknowledgement and note; confirm the source/status snapshot, mapped scope progress, event history, and evidence/finding summaries. Sign in as the assigned Auditor to confirm access, then as a read-only user outside the engagement to confirm the detail route is unavailable and mutation attempts are denied.
+- Administrators can manage controls and add rationale-bearing requirement mappings. Mapping changes do not change regulatory verification states, delete mappings, or rewrite existing engagement scope.
+- Auditor/Security Analyst users with `controls:assess` must also have engagement access to create a versioned assessment or approve it. `NOT_APPLICABLE` requires a reason; `NOT_TESTED` cannot be approved; approval requires reviewer justification and assessment-linked evidence except for `NOT_APPLICABLE`.
+- Applied additive migration `20261015191722_control_assessment_evidence` adds `ControlAssessmentEvidence` and a SQLite partial unique current-revision index. `data/dev.db` was up to date after migration, and current counts for controls, scope items, assessments, and evidence links were all zero. No application rows were seeded or changed.
+- Latest checks: **56 tests passed**, typecheck, lint, Prisma validation, migration status, client generation, and production build passed. No authenticated browser workflow was performed.
+- Manual browser verification: sign in as Administrator (do not rerun bootstrap), create a control and map a pending requirement; confirm its verification status remains unchanged. In a new engagement, select that requirement and confirm the mapped scope item appears. As an assigned Auditor/Analyst, record a revision, select same-engagement evidence metadata if available, verify `NOT_APPLICABLE` reason validation and approval rejection for `NOT_TESTED`/missing evidence or justification, then approve and create a later revision to confirm prior history remains. As Read-Only Reviewer and as an out-of-scope user, confirm all assessment mutations are denied and engagement records remain inaccessible.
 
-## 1. Regulatory Library workflow
+## Completed milestone: Audit Engagements
 
-- `src/app/[lang]/(app)/regulatory/page.tsx` reads actual source/version/requirement records. Administrators can create/edit source metadata, append source versions, add/edit requirements, and record status transitions with review notes. Server Actions independently require `regulatory:manage`, which is Administrator-only.
-- New source versions and requirements start pending verification. Required legal data is not fabricated; leave unconfirmed dates, applicability, and clause text blank. Requirement verification requires a verified parent version. Verification history is appended to `VerificationEvent`.
-- Version/requirement content becomes locked after review starts; return to pending with a review note to correct it. Verified source content should be updated with a new version. There is no deletion interface/action.
-- 39 tests, typecheck, lint, Prisma validation, and production build passed. UI testing as an authenticated admin is still pending because this local DB currently has no unexpired admin session.
+- The engagement list/detail uses SQLite data with search, status filters, loading/error states and creator/member-scoped access. Administrators/Auditors with `audit:manage` create/edit allowed fields; auditor assignment and status transitions are permission-checked and audited.
+- Requirement selection stores actor, selection time, verification status snapshot, and acknowledgement/note for non-verified requirements. Existing mappings seed scope items at selection time; later mapping changes do not rewrite them.
+- Applied additive migration `20261015124511_audit_engagement_workflow`; historical data was retained. Prior milestone checks reported 47 passing tests plus typecheck, lint, Prisma validation/status and build. Browser testing as a signed-in user remains pending.
+
+## Completed milestone: Regulatory Library
+
+- `src/app/[lang]/(app)/regulatory/page.tsx` reads actual source/version/requirement records. Administrators can maintain provenance, add/edit requirements, and record verification transitions with notes. Mutations require `regulatory:manage`.
+- New source versions and requirements start pending verification. Requirement verification requires a verified parent version. Verification history is appended to `VerificationEvent`; there is no delete interface/action.
+- Prior milestone checks reported 39 tests, typecheck, lint, Prisma validation, and production build passed. Authenticated browser verification remains pending.
 
 ## 2. Verified database foundation (2026-10-15)
 
@@ -42,7 +45,8 @@ Resume point for a fresh session. The authenticated dashboard reads live SQLite 
 - No MFA, password reset/recovery, or built-in per-IP/distributed login throttle. Apply trusted proxy/firewall limits if exposed beyond the private on-prem network.
 - Custom authentication code has not received an independent production security review. Verify reverse-proxy forwarding headers and production HTTPS/cookie behavior before deployment.
 - `npm audit --omit=dev` reported four high advisories in Prisma's `deepmerge-ts` / `mysql2` dependency chain. A breaking Prisma downgrade was not applied; review on a safe, compatible Prisma update.
-- Control assessment entry/approval, evidence uploads, reporting, and AI workflows are still placeholders. Any future data operation must use centralized server-side permissions and engagement-scoped access; hiding UI controls is not an authorization check. Operator verification of the Regulatory Library and Audit Engagements through an administrator session is still outstanding.
+- The current assessment rules do not require an independent approver; an authorized assessor can approve their own assessment. Decide whether maker-checker separation is required before operational use.
+- Evidence uploads/private storage/authorized download and evidence review, findings/remediation, reporting, and AI workflows remain incomplete. Assessment links reference database metadata only; they do not open, serve, or verify evidence files. Operator verification of the Regulatory Library, Audit Engagements, control catalogue, and assessment workflow through authenticated sessions is still outstanding.
 - Continue the verification checklist in REGULATORY_SOURCES.md; no regulatory item is verified without a named reviewer. Have a native speaker review the Azerbaijani dictionary.
 
 ## 5. Before further changes

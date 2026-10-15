@@ -34,6 +34,8 @@ src/
       (app)/           authenticated shell and protected pages/actions
         regulatory/    database-backed sources, versions, requirements, review actions
         audits/        scoped engagement list/detail, metadata and scope actions
+          [engagementId]/ assessment revisions, approvals, evidence references
+        controls/      control catalogue and requirement mappings
       actions.ts       logout Server Action
     api/health/        liveness probe, returns no data
     globals.css        design tokens (navy, teal, light surfaces)
@@ -42,6 +44,7 @@ src/
   lib/
     auth/              Argon2id, database sessions, DAL, RBAC, scoped access
     audits/            validated engagement workflow, scope selection and queries
+    controls/          searchable catalogue, mapping and assessment services/data
     domain/            enums, risk scoring, assessment rules (pure, unit-tested)
     regulatory/        validated source/version/requirement mutations and verification workflow
   proxy.ts             locale redirect only
@@ -69,26 +72,29 @@ storage-local/         private evidence directory (gitignored, never web-served)
 
   | Role | Read | Manage |
   |---|---|---|
-  | Administrator | All application records | All application permissions, including users, roles, and configuration |
+  | Administrator | All application records | All application permissions, including control catalogue and mapping management, users, roles, and configuration |
   | Auditor | Regulatory, audit, evidence, controls, findings, reports | Audits, control assessments, findings, reports |
   | Security Analyst | Regulatory, permitted audit, evidence, controls, findings | Evidence and control assessments |
   | Read-Only Reviewer | Regulatory, permitted audit, evidence, controls, findings, reports | None |
 
-  Every role requires `application:access`. Only administrators receive `application:manage`, `regulatory:manage`, and `users:manage`. Non-administrators must be the engagement creator or an assigned `AuditEngagementMember` for engagement-bound data.
+  Every role requires `application:access`. Only administrators receive `application:manage`, `regulatory:manage`, `controls:manage`, and `users:manage`. Auditor and Security Analyst retain `controls:assess`; Read-Only Reviewer has no mutation permissions. Non-administrators must be the engagement creator or an assigned `AuditEngagementMember` for engagement-bound data.
 - Regulatory source/version/requirement changes are Server Actions guarded by `regulatory:manage` and validated server-side. New versions and requirements start pending. Verification transitions require a note and append a `VerificationEvent`; a requirement cannot be verified before its parent version. Version and requirement text is locked once review begins, and verified text is superseded through a new version rather than overwritten. There is no delete action; schema restrictions protect referenced history.
 - Engagement creation/editing, requirement selection, auditor assignment, and status changes use server-side validation and the engagement-scoped authorization DAL. The workflow status graph is `DRAFT → IN_PROGRESS → IN_REVIEW → APPROVED → ARCHIVED`, with `IN_REVIEW → IN_PROGRESS` and early archive transitions. Status, metadata, auditor assignments, and scope selections append `AuditEvent` records. Auditor changes are Administrator-only; `createdById` is immutable.
 - Selecting a regulatory requirement creates an `AuditRequirementSelection` that snapshots the requirement verification state, actor, time, acknowledgement, and decision note. Selection of any non-`VERIFIED` requirement requires an explicit acknowledgement and note. Existing `RequirementControlMapping` rows are converted into `AuditScopeItem` rows where available. Selection does not imply legal authority or applicability.
-- Audit list/detail queries filter to Administrators or the engagement creator/current assigned auditor. Unknown or out-of-scope detail IDs resolve to not found. Search, status filtering, loading skeletons, empty states, and safe database-error responses are provided. Assessment progress, finding, and evidence figures are summaries only; assessment entry, evidence workflows, and AI analysis are not implemented.
+- Audit list/detail queries filter to Administrators or the engagement creator/current assigned auditor. Unknown or out-of-scope detail IDs resolve to not found. Search, status filtering, loading skeletons, empty states, and safe database-error responses are provided. Finding, upload/storage, and AI workflows remain unimplemented.
+- The Security Controls catalogue is searchable and database-backed. Administrators alone can create/update controls and add requirement mappings with rationale. Mapping associations are append-only in the UI; no delete/deactivation is offered because the existing relation has no history/deactivation field and deletion would risk scope provenance. Mapping never changes a requirement's verification status and does not rewrite existing engagement scope.
+- Control assessments are engagement-scoped Server Action operations requiring `controls:assess` and membership/resource authorization. Each status change creates a new `ControlAssessment` revision; `NOT_APPLICABLE` requires a reason. Approval requires an eligible tested status, reviewer justification, and assessment-specific evidence except for `NOT_APPLICABLE`; `NOT_TESTED` cannot be approved. Approval and revisions are audited. A SQLite partial unique index enforces at most one current revision per scope item while allowing multiple non-current historical rows.
+- `ControlAssessmentEvidence` records the assessment revision, existing `EvidenceDocument`, actor, and link time. Only metadata records from that engagement and either the selected control or no specific control can be linked. This does not implement upload, storage, file access, evidence review, or prove that evidence content supports a conclusion.
 - Audit events never contain passwords, tokens or document contents.
 - Evidence: validate real file type, extension and size; generate internal storage keys; store outside `public/` under `EVIDENCE_STORAGE_DIR`; SHA-256 on write; files served only through an authorized handler; never executed or rendered as HTML; behind a small storage interface so it can be replaced.
 - No evidence is sent to any external service.
 
 ## Data model
 
-Defined in `prisma/schema.prisma`. Authentication adds `Session` (token hash, user, expiry) and `BootstrapState` (durable one-time bootstrap marker); the engagement workflow adds `auditedOrganization` and `AuditRequirementSelection`. Existing engagement, assessment, finding, and evidence records are preserved by the additive migration.
+Defined in `prisma/schema.prisma`. Authentication adds `Session` (token hash, user, expiry) and `BootstrapState` (durable one-time bootstrap marker); the engagement workflow adds `auditedOrganization` and `AuditRequirementSelection`; the control-assessment workflow adds `ControlAssessmentEvidence`. Existing engagement, assessment, finding, and evidence records are preserved by additive migrations.
 
 - Enum-like fields are plain `String` columns; allowed values live in `src/lib/domain/enums.ts` and are enforced with Zod. This keeps the move to PostgreSQL or SQL Server simple.
-- History is kept by inserting rows: `ControlAssessment` versions (`isCurrent`), `AuditFindingHistory` snapshots, `VerificationEvent` log (including regulatory status transitions and review notes), evidence replacement chain (`replacesId`), requirement-selection decisions, and `AuditEvent` activity.
+- History is kept by inserting rows: `ControlAssessment` versions (`isCurrent`), `ControlAssessmentEvidence` revision-specific links, `AuditFindingHistory` snapshots, `VerificationEvent` log (including regulatory status transitions and review notes), evidence replacement chain (`replacesId`), requirement-selection decisions, and `AuditEvent` activity.
 - History-bearing relations use `onDelete: Restrict` so approved records cannot disappear through cascades.
 - Regulatory chain: `RegulatoryDocument` → `RegulatoryVersion` (decision number, dates, verification status) → `RegulatoryRequirement` (clause id, original text, separate translation, applicability, type, verification status, `isDemo`). `RequirementControlMapping` is many-to-many.
 - Audit chain: `AuditEngagement` (+ `AuditEngagementMember` for assigned auditors and access checks) → `AuditScopeItem` → `ControlAssessment`.
@@ -110,6 +116,9 @@ erDiagram
     RegulatoryRequirement ||--o{ AuditScopeItem : selected
     CybersecurityControl ||--o{ AuditScopeItem : selected
     AuditScopeItem ||--o{ ControlAssessment : versions
+    ControlAssessment ||--o{ ControlAssessmentEvidence : supported_by
+    EvidenceDocument ||--o{ ControlAssessmentEvidence : referenced_by
+    User ||--o{ ControlAssessmentEvidence : links
     AuditEngagement ||--o{ EvidenceDocument : holds
     EvidenceDocument ||--o{ EvidenceExtraction : extracted
     EvidenceDocument ||--o| EvidenceDocument : replaces

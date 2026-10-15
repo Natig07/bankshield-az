@@ -67,6 +67,13 @@ test("regulatory mutations are administrator-only", () => {
   );
 });
 
+test("control catalogue and mapping changes are administrator-only", () => {
+  assert.equal(hasPermission("ADMINISTRATOR", "controls:manage"), true);
+  assert.equal(hasPermission("AUDITOR", "controls:manage"), false);
+  assert.equal(hasPermission("SECURITY_ANALYST", "controls:manage"), false);
+  assert.equal(hasPermission("READ_ONLY_REVIEWER", "controls:manage"), false);
+});
+
 test("server authorization denies unauthenticated and unauthorized roles", () => {
   assert.throws(
     () => assertRolePermission(null, "application:access"),

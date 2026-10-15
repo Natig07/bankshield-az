@@ -5,6 +5,7 @@ import { useActionState } from "react";
 import type { Dictionary } from "@/i18n/get-dictionary";
 import type { VerificationStatus } from "@/lib/domain/enums";
 import { canTransitionEngagementStatus, ENGAGEMENT_STATUSES } from "@/lib/audits/workflow";
+import { AssessmentWorkflow } from "./assessment-workflow";
 import {
   assignAuditorAction,
   selectRequirementAction,
@@ -75,6 +76,17 @@ type RequirementOption = {
 };
 
 type Auditor = { id: string; name: string; email: string };
+type AssessmentData = {
+  id: string;
+  evidence: {
+    id: string;
+    controlId: string | null;
+    originalName: string;
+    reviewStatus: string;
+    uploadedAt: string;
+  }[];
+  scopeItems: React.ComponentProps<typeof AssessmentWorkflow>["scopeItems"];
+};
 
 export function EngagementDetails({
   lang,
@@ -85,6 +97,10 @@ export function EngagementDetails({
   auditors,
   canManage,
   canAssignAuditors,
+  assessmentData,
+  assessmentLabels,
+  assessmentStatuses,
+  canAssess,
 }: {
   lang: string;
   labels: Labels;
@@ -94,6 +110,10 @@ export function EngagementDetails({
   auditors: Auditor[];
   canManage: boolean;
   canAssignAuditors: boolean;
+  assessmentData: AssessmentData;
+  assessmentLabels: Dictionary["assessmentWorkflow"];
+  assessmentStatuses: Dictionary["dashboard"]["assessmentStatuses"];
+  canAssess: boolean;
 }) {
   const currentStatus = engagement.status;
   const assessed = engagement.scopeItems.filter((item) =>
@@ -145,6 +165,17 @@ export function EngagementDetails({
         <Metric label={labels.openFindings} value={openFindings} detail={`${labels.findings}: ${engagement.findings.length}`} />
         <Metric label={labels.evidence} value={engagement._count.evidence} />
       </section>
+
+      <AssessmentWorkflow
+        lang={lang}
+        engagementId={engagement.id}
+        labels={assessmentLabels}
+        statuses={assessmentStatuses}
+        verification={verification}
+        scopeItems={assessmentData.scopeItems}
+        evidence={assessmentData.evidence}
+        canAssess={canAssess}
+      />
 
       <section className="space-y-4 rounded-lg border border-line bg-surface p-5">
         <h2 className="text-lg font-semibold text-ink">{labels.requirementsTitle}</h2>

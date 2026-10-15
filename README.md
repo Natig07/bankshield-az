@@ -6,7 +6,7 @@ Bilingual (Azerbaijani and English) cybersecurity compliance and audit support p
 
 ## Current state
 
-The bilingual UI now requires an active account to access the application. Login and logout use Argon2id password verification and revocable SQLite-backed sessions. Administrators can create users, assign roles, and disable accounts. The Regulatory Library supports source, version, and requirement maintenance with review history. Audit engagements are database-backed, with scoped access, auditor assignment, requirement selection, status history, and progress summaries. Control assessment entry, evidence uploads, reporting, and AI analysis are not implemented.
+The bilingual UI requires an active account. Login and logout use Argon2id verification and revocable SQLite-backed sessions. Administrators can manage users, the security control catalogue, and requirement mappings. The Regulatory Library supports source, version, and requirement maintenance with review history. Audit engagements support scoped access, auditor assignment, requirement selection, status history, control assessment revisions, approval, and assessment-specific references to existing evidence metadata. Evidence upload/storage, findings/remediation, reporting, and AI analysis are not implemented.
 
 ## Run it locally
 
@@ -72,7 +72,7 @@ npm run db:generate
 npm run db:migrate
 ```
 
-The local database is `data/dev.db`; generated client files are under `src/generated/prisma`, and additive migrations are under `prisma/migrations`. Authentication tests use isolated temporary SQLite databases, not the development database.
+The local database is `data/dev.db`; generated client files are under `src/generated/prisma`, and additive migrations are under `prisma/migrations`. Authentication, Regulatory Library, Audit Engagement, and control/assessment integration tests use isolated temporary SQLite databases, not the development database.
 
 ## Role permissions
 
@@ -81,7 +81,7 @@ The local database is `data/dev.db`; generated client files are under `src/gener
 - **Security Analyst:** manage evidence and control assessments, and read permitted audit and finding records.
 - **Read-Only Reviewer:** read permitted records only.
 
-Every application page checks its permission on the server. Every current mutating Server Action checks the permission again; engagement data access must also go through the membership-aware DAL. The sidebar is only a convenience, not an authorization control.
+Control catalogue and requirement-mapping management (`controls:manage`) is Administrator-only. The Auditor and Security Analyst may assess controls (`controls:assess`) only within engagements they can access. Every application page checks its permission on the server. Every mutating Server Action checks the permission again; engagement data access must also go through the membership-aware DAL. The sidebar is only a convenience, not an authorization control.
 
 Login lockout triggers after five failed passwords for the same account and lasts 15 minutes. This reduces repeated targeted attempts; deployments exposed beyond a trusted internal network should also apply request-rate limits at their trusted reverse proxy/firewall.
 
@@ -101,7 +101,17 @@ The bilingual Audit Engagements area reads real records from SQLite and supports
 
 The status path is Draft → In progress → In review → Approved → Archived. In-review engagements may return to In progress; Draft or In-progress engagements may be archived. Changes and assignments append `AuditEvent` records, including status changes. Metadata edits update only engagement metadata and do not remove assessments, findings, evidence, or historical rows.
 
-Requirements are selected from non-demo Regulatory Library records. Selecting a non-verified requirement requires explicit acknowledgement and a decision note; the selection stores who made it, when, the requirement's verification status at selection time, and the note. This is not a legal verification or applicability decision. Existing requirement-to-control mappings are copied into assessment scope items when available. The details page summarizes current assessment status, findings, evidence, and engagement activity; assessment entry itself is not implemented.
+Requirements are selected from non-demo Regulatory Library records. Selecting a non-verified requirement requires explicit acknowledgement and a decision note; the selection stores who made it, when, the requirement's verification status at selection time, and the note. This is not a legal verification or applicability decision. Existing requirement-to-control mappings are copied into assessment scope items when available.
+
+## Security controls and assessments
+
+The Security Controls page is searchable and lists controls with their mapped requirements, source provenance, clause/topic, current verification state, and rationale. Administrators can create/update controls and add mappings with a substantive rationale. The interface does not remove mappings: the schema has no mapping history or deactivation state, and the relation cascades on deletion. A new mapping does not silently alter an existing `AuditScopeItem`; the current mappings are used when a requirement is selected for a new engagement.
+
+On an engagement detail page, Auditor/Security Analyst users with `controls:assess` and engagement access can record a new `ControlAssessment` revision for each scope item. Older revisions remain visible. `NOT_APPLICABLE` requires a reason. Approval is a separate server-enforced operation: `NOT_TESTED` cannot be approved; reviewer justification and evidence linked to that exact assessment are required, except for `NOT_APPLICABLE`. Each revision can reference existing evidence metadata belonging to the same engagement and control. The UI does not read or serve files.
+
+Migration `20261015191722_control_assessment_evidence` adds `ControlAssessmentEvidence` and a SQLite partial unique index that enforces at most one current assessment per scope item without preventing multiple historical revisions. It was applied additively; the existing development database had no duplicated current assessment rows, and no application records were seeded or changed.
+
+Evidence upload, private storage, authorized download, and evidence review remain unimplemented. Assessment evidence links identify selected metadata records; they do not verify file contents or establish a compliance conclusion. The current rules do not require an independent approver, so a permitted assessor can approve their own assessment; decide whether maker-checker separation is required before operational use. Mapping does not change regulatory verification state. The dashboard does not show a compliance percentage.
 
 The additive migration `20261015124511_audit_engagement_workflow` adds the audited-organisation column and the unique requirement-selection record. Existing engagement rows are preserved; older rows receive an empty organisation value until an authorised user updates their metadata. Do not reset or recreate the database to apply it.
 

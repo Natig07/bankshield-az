@@ -37,6 +37,7 @@ model User {
   engagementsCreated AuditEngagement[]       @relation("EngagementCreator")
   memberships        AuditEngagementMember[]
   scopeSelections    AuditRequirementSelection[]
+  assessmentEvidenceLinks ControlAssessmentEvidence[]
   events             AuditEvent[]
   sessions           Session[]
 
@@ -289,10 +290,28 @@ model ControlAssessment {
   createdAt     DateTime  @default(now())
 
   scopeItem AuditScopeItem @relation(fields: [scopeItemId], references: [id], onDelete: Restrict)
+  evidenceLinks ControlAssessmentEvidence[]
 
   @@unique([scopeItemId, version])
+  // The SQLite migration adds a partial unique index for isCurrent = true;
+  // a normal Prisma unique constraint would incorrectly limit history to two rows.
   @@index([scopeItemId, isCurrent])
   @@index([status])
+}
+
+model ControlAssessmentEvidence {
+  id           String   @id @default(cuid())
+  assessmentId String
+  evidenceId   String
+  linkedById   String
+  linkedAt     DateTime @default(now())
+
+  assessment ControlAssessment @relation(fields: [assessmentId], references: [id], onDelete: Restrict)
+  evidence   EvidenceDocument  @relation(fields: [evidenceId], references: [id], onDelete: Restrict)
+  linkedBy   User              @relation(fields: [linkedById], references: [id], onDelete: Restrict)
+
+  @@unique([assessmentId, evidenceId])
+  @@index([evidenceId])
 }
 
 // ───────────────────── Evidence ─────────────────────
@@ -323,6 +342,7 @@ model EvidenceDocument {
   replaces    EvidenceDocument?     @relation("EvidenceReplacement", fields: [replacesId], references: [id], onDelete: Restrict)
   replacedBy  EvidenceDocument[]    @relation("EvidenceReplacement")
   extractions EvidenceExtraction[]
+  assessmentLinks ControlAssessmentEvidence[]
   aiRuns      AIAnalysisRun[]
   suggestions AISuggestion[]
 

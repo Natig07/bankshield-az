@@ -8,6 +8,7 @@
     "dashboard": "İdarə paneli",
     "regulatory": "Normativ kitabxana",
     "audits": "Audit tapşırıqları",
+    "controls": "Təhlükəsizlik nəzarətləri",
     "evidence": "Sübutlar",
     "aiReview": "Sİ təhlili",
     "findings": "Nəticələr və düzəliş tədbirləri",
@@ -89,6 +90,11 @@
       "title": "Audit tapşırıqları",
       "description": "Audit tapşırıqları yaradın, əhatə dairəsini seçin və nəzarət tədbirlərini tam qiymətləndirmə tarixçəsi ilə qiymətləndirin.",
       "phase": "Mərhələ 3"
+    },
+    "controls": {
+      "title": "Təhlükəsizlik nəzarətləri",
+      "description": "Nəzarət tədbirləri kataloqunu və normativ tələblərlə insan tərəfindən nəzərdən keçirilmiş əlaqələri idarə edin.",
+      "phase": "Mərhələ 2"
     },
     "evidence": {
       "title": "Sübutlar",
@@ -260,7 +266,12 @@
       "AUDIT_ENGAGEMENT_UPDATED": "Tapşırıq məlumatları yeniləndi",
       "AUDIT_ENGAGEMENT_STATUS_CHANGED": "Tapşırığın statusu dəyişdirildi",
       "AUDIT_ENGAGEMENT_AUDITOR_ASSIGNED": "Auditor təyin edildi",
-      "AUDIT_REQUIREMENT_SELECTED": "Əhatə dairəsi üçün tələb seçildi"
+      "AUDIT_REQUIREMENT_SELECTED": "Əhatə dairəsi üçün tələb seçildi",
+      "CONTROL_CREATED": "Nəzarət tədbiri yaradıldı",
+      "CONTROL_UPDATED": "Nəzarət tədbiri yeniləndi",
+      "REQUIREMENT_CONTROL_MAPPED": "Normativ tələb nəzarət tədbirinə əlaqələndirildi",
+      "CONTROL_ASSESSMENT_REVISED": "Nəzarət tədbirinin qiymətləndirilməsi yeniləndi",
+      "CONTROL_ASSESSMENT_APPROVED": "Nəzarət qiymətləndirilməsi təsdiqləndi"
     },
     "errors": {
       "invalidInput": "Daxil edilmiş məlumatları yoxlayıb yenidən cəhd edin.",
@@ -276,6 +287,96 @@
       "statusUpdated": "Tapşırığın statusu yeniləndi.",
       "requirementSelected": "Tələb tapşırığın əhatə dairəsinə əlavə edildi.",
       "auditorAssigned": "Auditor təyinatı yeniləndi."
+    }
+  },
+  "controlWorkflow": {
+    "description": "Nəzarət qeydlərini və tələblərlə əlaqələri idarə edin. Əlaqələndirmə hüquqi yoxlama və ya uyğunluq nəticəsi deyil, daxili əsaslandırmadır.",
+    "search": "Kod, ad, sahə və ya təsvir üzrə axtar",
+    "searchAction": "Axtar",
+    "noControls": "Hələ təhlükəsizlik nəzarəti qeydə alınmayıb.",
+    "noSearchResults": "Axtarışa uyğun nəzarət tədbiri tapılmadı.",
+    "createControl": "Təhlükəsizlik nəzarəti əlavə et",
+    "editControl": "Nəzarət tədbirini redaktə et",
+    "saveControl": "Nəzarət tədbirini yadda saxla",
+    "saving": "Yadda saxlanılır…",
+    "code": "Nəzarət kodu",
+    "title": "Nəzarət tədbirinin adı",
+    "description": "Təsvir",
+    "domain": "Sahə",
+    "noDomain": "Sahə qeyd edilməyib",
+    "source": "Nəzarət tədbirinin mənbəyi",
+    "sourceLabels": {
+      "INTERNAL": "Daxili",
+      "ISO_27001": "ISO 27001",
+      "NIST_CSF": "NIST CSF"
+    },
+    "mappedRequirements": "Əlaqələndirilmiş normativ tələblər",
+    "mappingCount": "Əlaqələr",
+    "noMappings": "Bu nəzarət tədbiri ilə heç bir tələb əlaqələndirilməyib.",
+    "addMapping": "Tələb əlaqəsi əlavə et",
+    "chooseRequirement": "Tələb seçin",
+    "noAvailableRequirements": "Əlaqələndirilməmiş tələb yoxdur.",
+    "noTopic": "Mövzu qeyd edilməyib",
+    "rationale": "Əlaqələndirmə əsaslandırması",
+    "mapRequirement": "Əlaqə əlavə et",
+    "pendingVerificationNotice": "Əlaqələndirmə tələbi yoxlamır və təsdiqləmir. Cari yoxlama statusu dəyişməz qalır.",
+    "mappingHistoryNotice": "Bu interfeysdə əlaqələr əlavə ediləndir və silinmir. Mövcud audit əhatə dairəsinə səssizcə ötürülmür; cari əlaqələrdən yeni audit tapşırığında tələb seçərkən istifadə edin.",
+    "dataErrorTitle": "Nəzarət məlumatları əlçatan deyil",
+    "dataErrorBody": "Tətbiq nəzarət məlumatlarını oxuya bilmədi. Heç bir qeyd göstərilmir; sonra yenidən cəhd edin və ya sistem inzibatçısına müraciət edin.",
+    "errors": {
+      "invalidInput": "Daxil edilmiş məlumatları yoxlayıb yenidən cəhd edin.",
+      "duplicateControl": "Bu kodlu nəzarət tədbiri artıq mövcuddur.",
+      "duplicateMapping": "Bu tələb artıq həmin nəzarət tədbiri ilə əlaqələndirilib.",
+      "notFound": "Seçilmiş qeyd artıq mövcud deyil.",
+      "invalidEvidence": "Bu auditə aid və seçilmiş nəzarət tədbiri ilə əlaqəli sübut seçin.",
+      "approvalRejected": "Təsdiq üçün sınaqdan keçirilmiş status, rəyçinin əsaslandırması və tətbiq edilmirsə, əlaqələndirilmiş sübut tələb olunur.",
+      "invalidTransition": "Təsdiqlənmiş və ya cari olmayan qiymətləndirmə yerində dəyişdirilə bilməz.",
+      "concurrentRevision": "Eyni vaxtda başqa versiya yadda saxlanılıb. Səhifəni yeniləyib yenidən cəhd edin."
+    },
+    "success": {
+      "saved": "Nəzarət tədbiri yadda saxlanıldı.",
+      "mapped": "Tələb əlaqələndirildi. Onun yoxlama statusu dəyişdirilmədi.",
+      "assessmentSaved": "Qiymətləndirmənin yeni versiyası qeydə alındı.",
+      "approved": "Qiymətləndirmə təsdiqləndi və audit tarixçəsinə əlavə edildi."
+    }
+  },
+  "assessmentWorkflow": {
+    "title": "Nəzarət qiymətləndirmələri",
+    "emptyScope": "Qiymətləndirmə üçün əlaqələndirilmiş nəzarət tədbiri əhatəsi yoxdur.",
+    "current": "Cari",
+    "revision": "Versiya",
+    "noHistory": "Hələ qiymətləndirmə qeydə alınmayıb.",
+    "assessed": "Qiymətləndirmə qeydə alınıb",
+    "approved": "Təsdiqlənib",
+    "notApproved": "Təsdiqlənməyib",
+    "notApplicableReason": "Nəzarət tədbirinin tətbiq edilməməsinin səbəbi",
+    "newRevision": "Yeni versiya qeydə al",
+    "status": "Qiymətləndirmə statusu",
+    "evidence": "Bu audit və nəzarət tədbiri üçün sübut qeydləri",
+    "noEvidence": "Uyğun sübut qeydi yoxdur. Bu mərhələdə sübut yükləmə/saxlama funksiyası hazırlanmayıb.",
+    "evidenceHint": "Yalnız bu versiyanı əsaslandıran sübutları seçin. Sübut faylları burada açılmır və təqdim edilmir.",
+    "saveRevision": "Versiyanı yadda saxla",
+    "saving": "Yadda saxlanılır…",
+    "approveAssessment": "Cari qiymətləndirməni təsdiqlə",
+    "justification": "Rəyçinin əsaslandırması",
+    "approving": "Təsdiqlənir…",
+    "noAssessmentEvidence": "Bu qiymətləndirməyə sübut əlaqələndirilməyib.",
+    "pendingRequirement": "Normativ tələb yoxlanılmayıb; bu qiymətləndirmə onun hüquqi statusunu və tətbiqolunmasını təsdiqləmir.",
+    "errors": {
+      "invalidInput": "Daxil edilmiş məlumatları yoxlayıb yenidən cəhd edin.",
+      "duplicateControl": "Bu kodlu nəzarət tədbiri artıq mövcuddur.",
+      "duplicateMapping": "Bu tələb artıq həmin nəzarət tədbiri ilə əlaqələndirilib.",
+      "notFound": "Qiymətləndirmə və ya audit tapşırığı əlçatan deyil.",
+      "invalidEvidence": "Seçilmiş sübut bu auditə və ya nəzarət tədbirinə aid deyil.",
+      "approvalRejected": "Təsdiq üçün sınaqdan keçirilmiş qiymətləndirmə, rəyçi əsaslandırması və tətbiq edilmirsə, əlaqələndirilmiş sübut tələb olunur.",
+      "invalidTransition": "Yalnız təsdiqlənməmiş cari qiymətləndirmə təsdiqlənə bilər.",
+      "concurrentRevision": "Eyni vaxtda versiya qeydə alınıb. Səhifəni yeniləyin."
+    },
+    "success": {
+      "saved": "Nəzarət tədbiri yadda saxlanıldı.",
+      "mapped": "Tələb əlaqələndirildi.",
+      "assessmentSaved": "Qiymətləndirmənin yeni versiyası yadda saxlanıldı.",
+      "approved": "Qiymətləndirmə təsdiqləndi."
     }
   },
   "dashboard": {
