@@ -1,0 +1,165 @@
+{
+  "app": {
+    "name": "BankShield AZ",
+    "tagline": "Compliance and audit support",
+    "notice": "Compliance support tool. Not approved by the Central Bank of Azerbaijan. No regulatory content has been verified yet."
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "regulatory": "Regulatory Library",
+    "audits": "Audit Engagements",
+    "evidence": "Evidence",
+    "aiReview": "AI Review",
+    "findings": "Findings & Remediation",
+    "reports": "Reports",
+    "admin": "Administration"
+  },
+  "common": {
+    "language": "Language",
+    "plannedFor": "Planned for",
+    "notAvailableYet": "Not available yet",
+    "openSource": "Open source page",
+    "mainNavigation": "Main navigation"
+  },
+  "auth": {
+    "loginTitle": "Sign in",
+    "loginDescription": "Sign in with the account provided by your administrator.",
+    "email": "Email address",
+    "password": "Password",
+    "login": "Sign in",
+    "loggingIn": "Signing in…",
+    "invalidCredentials": "Email or password is incorrect, or the account is unavailable.",
+    "logout": "Sign out",
+    "unknownRole": "Unknown role",
+    "accessDeniedTitle": "Access denied",
+    "accessDeniedDescription": "Your account does not have permission to open this page.",
+    "returnToDashboard": "Return to dashboard"
+  },
+  "roles": {
+    "ADMINISTRATOR": "Administrator",
+    "AUDITOR": "Auditor",
+    "SECURITY_ANALYST": "Security Analyst",
+    "READ_ONLY_REVIEWER": "Read-Only Reviewer"
+  },
+  "users": {
+    "title": "User administration",
+    "description": "Create accounts, assign roles, and disable access. Role and account changes invalidate active sessions.",
+    "createTitle": "Create user",
+    "name": "Name",
+    "email": "Email",
+    "password": "Temporary password",
+    "passwordHint": "Use at least 12 characters. Share it with the user through a secure channel.",
+    "role": "Role",
+    "createUser": "Create user",
+    "creating": "Creating…",
+    "usersTitle": "Users",
+    "status": "Status",
+    "active": "Active",
+    "disabled": "Disabled",
+    "saveRole": "Save role",
+    "saving": "Saving…",
+    "disable": "Disable",
+    "enable": "Enable",
+    "errors": {
+      "invalidInput": "Check the submitted values and try again.",
+      "userExists": "An account with this email already exists.",
+      "userNotFound": "The selected account no longer exists.",
+      "lastAdministrator": "The last active administrator cannot be demoted or disabled.",
+      "cannotChangeSelf": "You cannot change your own role or disable your own account."
+    },
+    "success": {
+      "userCreated": "The account was created.",
+      "roleUpdated": "The role was updated. The user must sign in again.",
+      "accountUpdated": "The account status was updated."
+    }
+  },
+  "verification": {
+    "PENDING_VERIFICATION": "Pending verification",
+    "UNDER_LEGAL_REVIEW": "Under legal review",
+    "VERIFIED": "Verified",
+    "SUPERSEDED": "Superseded"
+  },
+  "sections": {
+    "regulatory": {
+      "title": "Regulatory Library",
+      "description": "Browse regulatory documents and requirements, view original clauses and labeled translations, and map requirements to controls.",
+      "phase": "Phase 2"
+    },
+    "audits": {
+      "title": "Audit Engagements",
+      "description": "Create engagements, select scope, and assess controls with full assessment history.",
+      "phase": "Phase 3"
+    },
+    "evidence": {
+      "title": "Evidence",
+      "description": "Upload PDF and DOCX evidence to private storage, with hashing, local text extraction, and review.",
+      "phase": "Phase 4"
+    },
+    "aiReview": {
+      "title": "AI Review",
+      "description": "Review AI-suggested mappings, gaps, and draft findings. Every suggestion starts as pending and needs a human decision.",
+      "phase": "Phase 5"
+    },
+    "findings": {
+      "title": "Findings & Remediation",
+      "description": "Track findings, risk scores, remediation owners, deadlines, and completion evidence.",
+      "phase": "Phase 3"
+    },
+    "reports": {
+      "title": "Reports",
+      "description": "Generate traceable audit reports with limitations and evidence references, in Azerbaijani or English.",
+      "phase": "Phase 6"
+    },
+    "admin": {
+      "title": "Administration",
+      "description": "Manage users, roles, and the audit log.",
+      "phase": "Phase 1"
+    }
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "subtitle": "Overview of regulatory verification and audit progress.",
+    "dataNotice": "Dashboard figures are read from the database. Empty counts mean no matching records are currently stored; they are not a compliance score. Some application modules are still under development.",
+    "errorTitle": "Dashboard data is temporarily unavailable",
+    "errorBody": "The application could not read dashboard data. No counts are shown; try again later or contact your system administrator.",
+    "emptyMetric": "No records",
+    "emptySources": "No regulatory sources are stored in the database yet.",
+    "metrics": {
+      "verifiedRequirements": "Verified requirements",
+      "assessmentStatuses": "Assessments by status",
+      "untested": "Current assessments not tested",
+      "sourcesPending": "Regulatory sources not yet verified",
+      "engagements": "Audit engagements",
+      "evidence": "Evidence records",
+      "openFindings": "Open findings by severity",
+      "overdueActions": "Overdue remediation actions",
+      "aiPending": "AI suggestions awaiting review"
+    },
+    "assessmentStatuses": {
+      "NOT_TESTED": "Not tested",
+      "COMPLIANT": "Compliant",
+      "PARTIALLY_COMPLIANT": "Partially compliant",
+      "NON_COMPLIANT": "Non-compliant",
+      "NOT_APPLICABLE": "Not applicable"
+    },
+    "severities": {
+      "LOW": "Low",
+      "MEDIUM": "Medium",
+      "HIGH": "High",
+      "CRITICAL": "Critical"
+    },
+    "sourcesTitle": "Regulatory sources",
+    "sourcesNote": "Retrieved through an automated summarizer. A named human reviewer must check each source against the official record before any requirement counts toward compliance metrics.",
+    "table": {
+      "source": "Source",
+      "issuer": "Issuer",
+      "textLanguage": "Retrieved text",
+      "status": "Verification status"
+    },
+    "languageNames": {
+      "az": "Azerbaijani",
+      "en": "English"
+    },
+    "of": "of"
+  }
+}

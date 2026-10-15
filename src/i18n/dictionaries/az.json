@@ -1,0 +1,165 @@
+{
+  "app": {
+    "name": "BankShield AZ",
+    "tagline": "Uyğunluq və audit dəstəyi",
+    "notice": "Uyğunluq dəstək vasitəsidir. Azərbaycan Mərkəzi Bankı tərəfindən təsdiq edilməyib. Hələ heç bir normativ məzmun yoxlanılmayıb."
+  },
+  "nav": {
+    "dashboard": "İdarə paneli",
+    "regulatory": "Normativ kitabxana",
+    "audits": "Audit tapşırıqları",
+    "evidence": "Sübutlar",
+    "aiReview": "Sİ təhlili",
+    "findings": "Nəticələr və düzəliş tədbirləri",
+    "reports": "Hesabatlar",
+    "admin": "İnzibatçılıq"
+  },
+  "common": {
+    "language": "Dil",
+    "plannedFor": "Planlaşdırılıb:",
+    "notAvailableYet": "Hələ mövcud deyil",
+    "openSource": "Mənbə səhifəsini aç",
+    "mainNavigation": "Əsas naviqasiya"
+  },
+  "auth": {
+    "loginTitle": "Daxil ol",
+    "loginDescription": "İnzibatçınızın təqdim etdiyi hesabla daxil olun.",
+    "email": "E-poçt ünvanı",
+    "password": "Şifrə",
+    "login": "Daxil ol",
+    "loggingIn": "Daxil olunur…",
+    "invalidCredentials": "E-poçt və ya şifrə yanlışdır, yaxud hesab əlçatan deyil.",
+    "logout": "Çıxış",
+    "unknownRole": "Naməlum rol",
+    "accessDeniedTitle": "Girişə icazə verilmədi",
+    "accessDeniedDescription": "Hesabınızın bu səhifəni açmaq üçün icazəsi yoxdur.",
+    "returnToDashboard": "İdarə panelinə qayıt"
+  },
+  "roles": {
+    "ADMINISTRATOR": "İnzibatçı",
+    "AUDITOR": "Auditor",
+    "SECURITY_ANALYST": "Kibertəhlükəsizlik analitiki",
+    "READ_ONLY_REVIEWER": "Yalnız baxış rəyçisi"
+  },
+  "users": {
+    "title": "İstifadəçilərin idarə edilməsi",
+    "description": "Hesab yaradın, rollar təyin edin və girişi deaktiv edin. Rol və hesab dəyişiklikləri aktiv sessiyaları ləğv edir.",
+    "createTitle": "İstifadəçi yarat",
+    "name": "Ad",
+    "email": "E-poçt",
+    "password": "Müvəqqəti şifrə",
+    "passwordHint": "Ən azı 12 simvol istifadə edin. Şifrəni istifadəçiyə təhlükəsiz kanal vasitəsilə çatdırın.",
+    "role": "Rol",
+    "createUser": "İstifadəçi yarat",
+    "creating": "Yaradılır…",
+    "usersTitle": "İstifadəçilər",
+    "status": "Status",
+    "active": "Aktiv",
+    "disabled": "Deaktiv",
+    "saveRole": "Rolu yadda saxla",
+    "saving": "Yadda saxlanılır…",
+    "disable": "Deaktiv et",
+    "enable": "Aktiv et",
+    "errors": {
+      "invalidInput": "Göndərilən məlumatları yoxlayıb yenidən cəhd edin.",
+      "userExists": "Bu e-poçt ünvanı ilə hesab artıq mövcuddur.",
+      "userNotFound": "Seçilmiş hesab artıq mövcud deyil.",
+      "lastAdministrator": "Son aktiv inzibatçının rolunu azaltmaq və ya hesabını deaktiv etmək olmaz.",
+      "cannotChangeSelf": "Öz rolunuzu dəyişə və ya öz hesabınızı deaktiv edə bilməzsiniz."
+    },
+    "success": {
+      "userCreated": "Hesab yaradıldı.",
+      "roleUpdated": "Rol yeniləndi. İstifadəçi yenidən daxil olmalıdır.",
+      "accountUpdated": "Hesabın statusu yeniləndi."
+    }
+  },
+  "verification": {
+    "PENDING_VERIFICATION": "Yoxlama gözlənilir",
+    "UNDER_LEGAL_REVIEW": "Hüquqi baxışdadır",
+    "VERIFIED": "Təsdiqlənib",
+    "SUPERSEDED": "Əvəz edilib"
+  },
+  "sections": {
+    "regulatory": {
+      "title": "Normativ kitabxana",
+      "description": "Normativ sənədlərə və tələblərə baxın, orijinal bəndləri və qeyd olunmuş tərcümələri görün, tələbləri nəzarət tədbirləri ilə əlaqələndirin.",
+      "phase": "Mərhələ 2"
+    },
+    "audits": {
+      "title": "Audit tapşırıqları",
+      "description": "Audit tapşırıqları yaradın, əhatə dairəsini seçin və nəzarət tədbirlərini tam qiymətləndirmə tarixçəsi ilə qiymətləndirin.",
+      "phase": "Mərhələ 3"
+    },
+    "evidence": {
+      "title": "Sübutlar",
+      "description": "PDF və DOCX sübutlarını heşləmə, lokal mətn çıxarılması və yoxlama ilə şəxsi saxlama sahəsinə yükləyin.",
+      "phase": "Mərhələ 4"
+    },
+    "aiReview": {
+      "title": "Sİ təhlili",
+      "description": "Sİ tərəfindən təklif olunan uyğunluqlara, boşluqlara və nəticə layihələrinə baxın. Hər təklif gözləmə statusunda başlayır və insan qərarı tələb edir.",
+      "phase": "Mərhələ 5"
+    },
+    "findings": {
+      "title": "Nəticələr və düzəliş tədbirləri",
+      "description": "Nəticələri, risk qiymətlərini, düzəliş məsullarını, müddətləri və tamamlanma sübutlarını izləyin.",
+      "phase": "Mərhələ 3"
+    },
+    "reports": {
+      "title": "Hesabatlar",
+      "description": "Məhdudiyyətləri və sübut istinadlarını əks etdirən izlənə bilən audit hesabatlarını Azərbaycan və ya ingilis dilində hazırlayın.",
+      "phase": "Mərhələ 6"
+    },
+    "admin": {
+      "title": "İnzibatçılıq",
+      "description": "İstifadəçiləri, rolları və audit jurnalını idarə edin.",
+      "phase": "Mərhələ 1"
+    }
+  },
+  "dashboard": {
+    "title": "İdarə paneli",
+    "subtitle": "Normativ yoxlama və audit gedişatına ümumi baxış.",
+    "dataNotice": "İdarə paneli göstəriciləri verilənlər bazasından oxunur. Boş nəticələr uyğun qeydlərin hazırda saxlanmadığını bildirir, uyğunluq balı deyil. Bəzi tətbiq modulları hələ hazırlanma mərhələsindədir.",
+    "errorTitle": "İdarə paneli məlumatları hazırda əlçatan deyil",
+    "errorBody": "Tətbiq idarə paneli məlumatlarını oxuya bilmədi. Heç bir say göstərilmir; sonra yenidən cəhd edin və ya sistem inzibatçısı ilə əlaqə saxlayın.",
+    "emptyMetric": "Qeyd yoxdur",
+    "emptySources": "Verilənlər bazasında hələ normativ mənbə saxlanılmayıb.",
+    "metrics": {
+      "verifiedRequirements": "Təsdiqlənmiş tələblər",
+      "assessmentStatuses": "Statuslar üzrə qiymətləndirmələr",
+      "untested": "Sınaqdan keçirilməmiş cari qiymətləndirmələr",
+      "sourcesPending": "Hələ yoxlanılmamış normativ mənbələr",
+      "engagements": "Audit tapşırıqları",
+      "evidence": "Sübut qeydləri",
+      "openFindings": "Ciddilik üzrə açıq nəticələr",
+      "overdueActions": "Gecikmiş düzəliş tədbirləri",
+      "aiPending": "Baxış gözləyən Sİ təklifləri"
+    },
+    "assessmentStatuses": {
+      "NOT_TESTED": "Sınaqdan keçirilməyib",
+      "COMPLIANT": "Uyğundur",
+      "PARTIALLY_COMPLIANT": "Qismən uyğundur",
+      "NON_COMPLIANT": "Uyğun deyil",
+      "NOT_APPLICABLE": "Tətbiq edilmir"
+    },
+    "severities": {
+      "LOW": "Aşağı",
+      "MEDIUM": "Orta",
+      "HIGH": "Yüksək",
+      "CRITICAL": "Kritik"
+    },
+    "sourcesTitle": "Normativ mənbələr",
+    "sourcesNote": "Avtomatik xülasə vasitəsilə əldə edilib. Hər hansı tələb uyğunluq göstəricilərinə daxil edilməzdən əvvəl adı məlum insan rəyçi hər mənbəni rəsmi qeydlə tutuşdurmalıdır.",
+    "table": {
+      "source": "Mənbə",
+      "issuer": "Qəbul edən orqan",
+      "textLanguage": "Əldə edilən mətn",
+      "status": "Yoxlama statusu"
+    },
+    "languageNames": {
+      "az": "Azərbaycan dili",
+      "en": "İngilis dili"
+    },
+    "of": "/"
+  }
+}

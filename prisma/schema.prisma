@@ -1,0 +1,485 @@
+// BankShield AZ data model.
+//
+// Portability note: status/role/type columns are plain String fields whose allowed
+// values live in src/lib/domain/enums.ts and are enforced with Zod at the application
+// boundary. SQL Server has no native enum support in Prisma, so this keeps the
+// PostgreSQL / SQL Server migration path simple. See ARCHITECTURE.md.
+//
+// History is preserved by inserting new rows (assessment versions, finding history,
+// evidence replacements) instead of overwriting. Relations that point at history
+// use onDelete: Restrict so approved records cannot be removed by cascading deletes.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+// ───────────────────────── Users ─────────────────────────
+
+model User {
+  id               String    @id @default(cuid())
+  email            String    @unique
+  name             String
+  passwordHash     String
+  // ADMINISTRATOR | AUDITOR | SECURITY_ANALYST | READ_ONLY_REVIEWER
+  role             String
+  preferredLocale  String    @default("az") // az | en
+  isActive         Boolean   @default(true)
+  failedLoginCount Int       @default(0)
+  lockedUntil      DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  engagementsCreated AuditEngagement[]       @relation("EngagementCreator")
+  memberships        AuditEngagementMember[]
+  events             AuditEvent[]
+  sessions           Session[]
+
+  @@index([role])
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+// A single durable marker prevents the CLI bootstrap from being repeated.
+model BootstrapState {
+  key       String   @id
+  createdAt DateTime @default(now())
+}
+
+// ───────────────────── Regulatory library ─────────────────────
+
+model RegulatoryDocument {
+  id          String   @id @default(cuid())
+  code        String   @unique // short internal code, e.g. "CBA-ISM-2021"
+  title       String
+  issuer      String
+  sourceUrl   String
+  // MANDATORY_LAW | OPTIONAL_FRAMEWORK (ISO 27001, NIST CSF, ...)
+  kind        String
+  language    String // language of the retrieved text: az | en
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  versions RegulatoryVersion[]
+
+  @@index([kind])
+}
+
+model RegulatoryVersion {
+  id                 String    @id @default(cuid())
+  documentId         String
+  versionLabel       String
+  decisionNumber     String? // as printed in the official source, only when confirmed
+  decisionDate       DateTime?
+  effectiveFrom      DateTime?
+  effectiveTo        DateTime?
+  sourceUrl          String
+  retrievedAt        DateTime?
+  // PENDING_VERIFICATION | UNDER_LEGAL_REVIEW | VERIFIED | SUPERSEDED
+  verificationStatus String    @default("PENDING_VERIFICATION")
+  verificationNotes  String?
+  verifiedById       String?
+  verifiedAt         DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  document     RegulatoryDocument      @relation(fields: [documentId], references: [id], onDelete: Restrict)
+  requirements RegulatoryRequirement[]
+  history      VerificationEvent[]
+
+  @@unique([documentId, versionLabel])
+  @@index([verificationStatus])
+}
+
+model RegulatoryRequirement {
+  id                 String   @id @default(cuid())
+  versionId          String
+  clauseId           String // exactly as printed, e.g. "7.4.3.7" or "Art. 10"
+  section            String?
+  topic              String?
+  // Original wording and translation are stored separately and never merged.
+  textOriginal       String? // original Azerbaijani wording when obtained
+  textTranslation    String?
+  translationLabel   String? // e.g. "Unofficial English translation"
+  translationSource  String? // who/what produced the translation
+  applicability      String? // institution types / entity category, as stated by the source
+  // MANDATORY_LAW | OPTIONAL_FRAMEWORK
+  requirementType    String   @default("MANDATORY_LAW")
+  verificationStatus String   @default("PENDING_VERIFICATION")
+  isDemo             Boolean  @default(false) // fictional demo content, never authoritative
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  version      RegulatoryVersion           @relation(fields: [versionId], references: [id], onDelete: Restrict)
+  mappings     RequirementControlMapping[]
+  scopeItems   AuditScopeItem[]
+  suggestions  AISuggestion[]
+  findings     AuditFinding[]
+  history      VerificationEvent[]
+
+  @@unique([versionId, clauseId])
+  @@index([verificationStatus])
+  @@index([topic])
+}
+
+// Append-only log of verification status changes (versions or requirements).
+model VerificationEvent {
+  id            String   @id @default(cuid())
+  versionId     String?
+  requirementId String?
+  fromStatus    String?
+  toStatus      String
+  actorId       String
+  note          String?
+  createdAt     DateTime @default(now())
+
+  version     RegulatoryVersion?     @relation(fields: [versionId], references: [id], onDelete: Restrict)
+  requirement RegulatoryRequirement? @relation(fields: [requirementId], references: [id], onDelete: Restrict)
+
+  @@index([versionId])
+  @@index([requirementId])
+}
+
+model CybersecurityControl {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  title       String
+  description String?
+  domain      String?
+  // INTERNAL | ISO_27001 | NIST_CSF  (optional frameworks are not legal requirements)
+  source      String   @default("INTERNAL")
+  isDemo      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  mappings   RequirementControlMapping[]
+  scopeItems AuditScopeItem[]
+  evidence   EvidenceDocument[]
+
+  @@index([domain])
+}
+
+model RequirementControlMapping {
+  id            String   @id @default(cuid())
+  requirementId String
+  controlId     String
+  rationale     String?
+  mappedById    String?
+  createdAt     DateTime @default(now())
+
+  requirement RegulatoryRequirement @relation(fields: [requirementId], references: [id], onDelete: Cascade)
+  control     CybersecurityControl  @relation(fields: [controlId], references: [id], onDelete: Cascade)
+
+  @@unique([requirementId, controlId])
+  @@index([controlId])
+}
+
+// ───────────────────── Audit engagements ─────────────────────
+
+model AuditEngagement {
+  id          String    @id @default(cuid())
+  title       String
+  scope       String
+  periodStart DateTime
+  periodEnd   DateTime
+  // DRAFT | IN_PROGRESS | IN_REVIEW | APPROVED | ARCHIVED
+  status      String    @default("DRAFT")
+  createdById String
+  approvedById String?
+  approvedAt  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  createdBy User                    @relation("EngagementCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  members   AuditEngagementMember[]
+  scopeItems AuditScopeItem[]
+  evidence  EvidenceDocument[]
+  findings  AuditFinding[]
+  reports   ReportRecord[]
+  aiRuns    AIAnalysisRun[]
+
+  @@index([status])
+}
+
+// Assigned auditors; also the basis for cross-engagement access checks.
+model AuditEngagementMember {
+  id           String   @id @default(cuid())
+  engagementId String
+  userId       String
+  createdAt    DateTime @default(now())
+
+  engagement AuditEngagement @relation(fields: [engagementId], references: [id], onDelete: Cascade)
+  user       User            @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@unique([engagementId, userId])
+  @@index([userId])
+}
+
+model AuditScopeItem {
+  id            String   @id @default(cuid())
+  engagementId  String
+  requirementId String
+  controlId     String
+  createdAt     DateTime @default(now())
+
+  engagement  AuditEngagement       @relation(fields: [engagementId], references: [id], onDelete: Restrict)
+  requirement RegulatoryRequirement @relation(fields: [requirementId], references: [id], onDelete: Restrict)
+  control     CybersecurityControl  @relation(fields: [controlId], references: [id], onDelete: Restrict)
+  assessments ControlAssessment[]
+
+  @@unique([engagementId, requirementId, controlId])
+  @@index([requirementId])
+  @@index([controlId])
+}
+
+// One row per assessment revision. The current one has isCurrent = true.
+// Approved rows are never updated in place; a change creates a new version.
+model ControlAssessment {
+  id            String    @id @default(cuid())
+  scopeItemId   String
+  version       Int
+  isCurrent     Boolean   @default(true)
+  // NOT_TESTED | COMPLIANT | PARTIALLY_COMPLIANT | NON_COMPLIANT | NOT_APPLICABLE
+  status        String    @default("NOT_TESTED")
+  notApplicableReason String? // required when status = NOT_APPLICABLE
+  justification String?   // reviewer justification, required before approval
+  assessedById  String?
+  approvedById  String?
+  approvedAt    DateTime?
+  createdAt     DateTime  @default(now())
+
+  scopeItem AuditScopeItem @relation(fields: [scopeItemId], references: [id], onDelete: Restrict)
+
+  @@unique([scopeItemId, version])
+  @@index([scopeItemId, isCurrent])
+  @@index([status])
+}
+
+// ───────────────────── Evidence ─────────────────────
+
+model EvidenceDocument {
+  id               String   @id @default(cuid())
+  engagementId     String
+  controlId        String?
+  originalName     String // as uploaded; display only, never used as a path
+  storageKey       String   @unique // internal generated identifier
+  mimeType         String
+  sizeBytes        Int
+  sha256           String
+  classification   String   @default("CONFIDENTIAL")
+  uploadedById     String
+  uploadedAt       DateTime @default(now())
+  // PENDING | PROCESSING | EXTRACTED | FAILED
+  extractionStatus String   @default("PENDING")
+  // PENDING_REVIEW | ACCEPTED | REJECTED | SUPERSEDED
+  reviewStatus     String   @default("PENDING_REVIEW")
+  reviewedById     String?
+  reviewedAt       DateTime?
+  reviewNote       String?
+  replacesId       String?  // previous record this upload supersedes
+
+  engagement  AuditEngagement       @relation(fields: [engagementId], references: [id], onDelete: Restrict)
+  control     CybersecurityControl? @relation(fields: [controlId], references: [id], onDelete: Restrict)
+  replaces    EvidenceDocument?     @relation("EvidenceReplacement", fields: [replacesId], references: [id], onDelete: Restrict)
+  replacedBy  EvidenceDocument[]    @relation("EvidenceReplacement")
+  extractions EvidenceExtraction[]
+  aiRuns      AIAnalysisRun[]
+  suggestions AISuggestion[]
+
+  @@index([engagementId])
+  @@index([controlId])
+  @@index([sha256])
+}
+
+// Extracted text, one row per page where page boundaries are known.
+model EvidenceExtraction {
+  id         String   @id @default(cuid())
+  evidenceId String
+  pageNumber Int?
+  text       String
+  // OK | FAILED
+  status     String   @default("OK")
+  error      String?
+  createdAt  DateTime @default(now())
+
+  evidence EvidenceDocument @relation(fields: [evidenceId], references: [id], onDelete: Cascade)
+
+  @@index([evidenceId, pageNumber])
+}
+
+// ───────────────────── AI-assisted review ─────────────────────
+
+model AIAnalysisRun {
+  id            String    @id @default(cuid())
+  engagementId  String
+  evidenceId    String
+  provider      String // e.g. "mock", "local-endpoint"
+  model         String?
+  isSimulated   Boolean   @default(true)
+  promptVersion String?
+  // RUNNING | COMPLETED | FAILED | REJECTED_OUTPUT
+  status        String    @default("RUNNING")
+  error         String?
+  startedById   String
+  startedAt     DateTime  @default(now())
+  completedAt   DateTime?
+
+  engagement  AuditEngagement @relation(fields: [engagementId], references: [id], onDelete: Restrict)
+  evidence    EvidenceDocument @relation(fields: [evidenceId], references: [id], onDelete: Restrict)
+  suggestions AISuggestion[]
+
+  @@index([engagementId])
+  @@index([evidenceId])
+}
+
+model AISuggestion {
+  id                 String    @id @default(cuid())
+  runId              String
+  requirementId      String
+  evidenceId         String
+  // MAPPING | GAP | DRAFT_FINDING | INSUFFICIENT_EVIDENCE
+  kind               String
+  quotation          String? // must be an exact substring of the extracted text
+  pageNumber         Int?
+  quotationVerified  Boolean   @default(false)
+  explanation        String
+  // LOW | MEDIUM | HIGH. Not a risk severity and not a compliance status.
+  confidence         String
+  limitations        String
+  // PENDING_REVIEW | ACCEPTED | REJECTED
+  reviewStatus       String    @default("PENDING_REVIEW")
+  reviewedById       String?
+  reviewedAt         DateTime?
+  reviewNote         String?
+  createdAt          DateTime  @default(now())
+
+  run         AIAnalysisRun         @relation(fields: [runId], references: [id], onDelete: Restrict)
+  requirement RegulatoryRequirement @relation(fields: [requirementId], references: [id], onDelete: Restrict)
+  evidence    EvidenceDocument      @relation(fields: [evidenceId], references: [id], onDelete: Restrict)
+  findings    AuditFinding[]
+
+  @@index([runId])
+  @@index([reviewStatus])
+  @@index([requirementId])
+}
+
+// ───────────────────── Findings and remediation ─────────────────────
+
+model AuditFinding {
+  id                 String    @id @default(cuid())
+  engagementId       String
+  requirementId      String?
+  sourceSuggestionId String? // set when a human promoted an AI draft
+  title              String
+  description        String
+  // LOW | MEDIUM | HIGH | CRITICAL (human-assigned)
+  severity           String
+  // OPEN | IN_REMEDIATION | READY_FOR_REVIEW | CLOSED
+  status             String    @default("OPEN")
+  // Risk inputs on configurable scales; formula documented in src/lib/domain/risk.ts
+  inherentLikelihood Int?
+  inherentImpact     Int?
+  residualLikelihood Int?
+  residualImpact     Int?
+  createdById        String
+  approvedById       String?
+  approvedAt         DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  engagement       AuditEngagement        @relation(fields: [engagementId], references: [id], onDelete: Restrict)
+  requirement      RegulatoryRequirement? @relation(fields: [requirementId], references: [id], onDelete: Restrict)
+  sourceSuggestion AISuggestion?          @relation(fields: [sourceSuggestionId], references: [id], onDelete: Restrict)
+  actions          RemediationAction[]
+  history          AuditFindingHistory[]
+
+  @@index([engagementId, status])
+  @@index([severity])
+}
+
+// Append-only snapshots of a finding at each change.
+model AuditFindingHistory {
+  id          String   @id @default(cuid())
+  findingId   String
+  snapshot    String // JSON snapshot of the finding fields (no document contents)
+  changedById String
+  changeNote  String?
+  createdAt   DateTime @default(now())
+
+  finding AuditFinding @relation(fields: [findingId], references: [id], onDelete: Restrict)
+
+  @@index([findingId])
+}
+
+model RemediationAction {
+  id                   String    @id @default(cuid())
+  findingId            String
+  ownerName            String
+  ownerUserId          String?
+  actionPlan           String
+  dueDate              DateTime
+  // OPEN | IN_PROGRESS | COMPLETED | VERIFIED
+  status               String    @default("OPEN")
+  completionEvidenceId String?
+  completedAt          DateTime?
+  verifiedById         String?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  finding AuditFinding @relation(fields: [findingId], references: [id], onDelete: Restrict)
+
+  @@index([findingId])
+  @@index([status, dueDate])
+}
+
+// ───────────────────── Accountability ─────────────────────
+
+// Append-only security/audit log. Never store passwords, tokens or document contents.
+model AuditEvent {
+  id         String   @id @default(cuid())
+  actorId    String?
+  action     String
+  entityType String?
+  entityId   String?
+  // SUCCESS | DENIED | FAILURE
+  outcome    String
+  detail     String? // short non-sensitive text
+  createdAt  DateTime @default(now())
+
+  actor User? @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([actorId])
+  @@index([action])
+  @@index([createdAt])
+}
+
+model ReportRecord {
+  id            String    @id @default(cuid())
+  engagementId  String
+  locale        String // az | en
+  generatedById String
+  generatedAt   DateTime  @default(now())
+  contentSha256 String
+  approvedById  String?
+  approvedAt    DateTime?
+  approvalNote  String?
+
+  engagement AuditEngagement @relation(fields: [engagementId], references: [id], onDelete: Restrict)
+
+  @@index([engagementId])
+}

@@ -1,0 +1,41 @@
+@import "tailwindcss";
+
+/* Design tokens: deep navy sidebar, light content surfaces, restrained teal accent. */
+@theme {
+  --color-navy-950: #071624;
+  --color-navy-900: #0b1f33;
+  --color-navy-800: #12304d;
+  --color-navy-300: #9fb3c8;
+  --color-navy-100: #dbe4ee;
+
+  --color-teal-accent: #14b8a6;
+  --color-teal-strong: #0f766e;
+
+  --color-surface: #ffffff;
+  --color-canvas: #f3f5f8;
+  --color-line: #d9e0e8;
+  --color-ink: #14212e;
+  --color-ink-muted: #4a5b6c;
+
+  --color-warn-bg: #fff7e6;
+  --color-warn-line: #e8c97a;
+  --color-warn-ink: #6b4a00;
+
+  /* System fonts only: no network fetch at build time, and full Azerbaijani coverage. */
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+html {
+  color-scheme: light;
+}
+
+body {
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-teal-strong);
+  outline-offset: 2px;
+}
