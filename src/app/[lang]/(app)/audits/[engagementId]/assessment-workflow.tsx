@@ -33,6 +33,7 @@ type ScopeItem = {
     status: string;
     notApplicableReason: string | null;
     justification: string | null;
+    assessedById: string | null;
     approvedById: string | null;
     approvedAt: string | null;
     createdAt: string;
@@ -54,6 +55,7 @@ export function AssessmentWorkflow({
   scopeItems,
   evidence,
   canAssess,
+  currentUserId,
 }: {
   lang: string;
   engagementId: string;
@@ -63,6 +65,7 @@ export function AssessmentWorkflow({
   scopeItems: ScopeItem[];
   evidence: Evidence[];
   canAssess: boolean;
+  currentUserId: string;
 }) {
   return (
     <section className="space-y-4">
@@ -124,7 +127,10 @@ export function AssessmentWorkflow({
                           ))}
                         </ul>
                       )}
-                      {canAssess && assessment.isCurrent && !assessment.approvedAt && (
+                      {canAssess && assessment.isCurrent && !assessment.approvedAt && assessment.assessedById === currentUserId && (
+                        <p className="mt-3 border-t border-line pt-3 text-sm text-ink-muted">{labels.independentApprovalNotice}</p>
+                      )}
+                      {canAssess && assessment.isCurrent && !assessment.approvedAt && assessment.assessedById !== currentUserId && (
                         <ApproveForm
                           lang={lang}
                           engagementId={engagementId}
@@ -181,6 +187,11 @@ function RevisionForm({
         <input type="hidden" name="lang" value={lang} />
         <input type="hidden" name="engagementId" value={engagementId} />
         <input type="hidden" name="scopeItemId" value={scopeItem.id} />
+        <input
+          type="hidden"
+          name="expectedVersion"
+          value={scopeItem.assessments.reduce((latest, assessment) => Math.max(latest, assessment.version), 0)}
+        />
         <label className="text-sm font-medium text-ink">
           {labels.status}
           <select name="status" defaultValue={currentStatus ?? "NOT_TESTED"} className="mt-1 w-full rounded-md border border-line bg-surface px-3 py-2 font-normal">

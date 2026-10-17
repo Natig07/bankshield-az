@@ -1,5 +1,29 @@
 # PROGRESS.md
 
+# Evidence, maker-checker, Risk Register, Findings and Remediation (2026-10-16/17) — IMPLEMENTED AND TESTED WITH ISOLATED SQLITE DATABASES; NO BROWSER / END-TO-END RUN
+
+Everything below was built and verified in a cloud sandbox, not on the operator's machine. Tests use temporary SQLite databases built from `prisma/migrations/*/migration.sql`; the development database `data/dev.db` was never touched, reset or seeded. **No authenticated browser session or end-to-end test was run.**
+
+### Implemented
+- **Engagement workflow:** operation-based status locks (`src/lib/audits/workflow.ts`): scope/metadata/assessment/evidence changes only in DRAFT/IN_PROGRESS, review in IN_PROGRESS/IN_REVIEW, remediation continues after APPROVED. Compare-and-set status transitions. Security analysts can be added as engagement participants (administrator action) so they can reach the engagement; the auditor slot is replaced by role, not by position. Engagement search bug fixed (`q` vs `search`, repeated parameters).
+- **Controls/assessments:** optimistic concurrency (`expectedVersion`) on assessment revisions; **independent approval** (approver must differ from the assessor); rejected/superseded evidence cannot be linked; engagement locks enforced.
+- **Evidence:** secure local upload/download. Server-generated 256-bit opaque storage keys, extension/MIME/magic-byte allow-list, 10 MB limit, SHA-256, duplicate detection, superseding uploads, `evidence:review` with **reviewer ≠ uploader**, authorized streaming download from `/api/evidence/[evidenceId]` (`nosniff`, attachment disposition, no-store), path-traversal-safe storage, cleanup of stored files when the database write fails. Tested with synthetic files only. **No malware scanning.**
+- **Risk Register:** new additive migration `20261016100000_risk_register` (`Asset`, `Risk`, `RiskControl`, `RiskTreatmentAction`, `RiskHistory`). Scores are computed (likelihood × impact, bands from `src/lib/domain/risk.ts`), never stored. Lifecycle OPEN → IN_TREATMENT → ACCEPTED/CLOSED with rules (treatment plus an action to start treatment, acceptance needs `risks:accept`, justification, residual scores and a future review date; closing needs all actions finished). Optimistic concurrency via `revision`; append-only `RiskHistory`; control links; treatment actions with overdue detection. Pages: `/risks`, `/risks/[riskId]`.
+- **Findings and remediation:** no schema change (existing `AuditFinding`, `AuditFindingHistory`, `RemediationAction`). Lifecycle OPEN → IN_REMEDIATION → READY_FOR_REVIEW → CLOSED. Rules: at least one action to start remediation; all actions completed before review; all actions **verified** before closure; **the person who raised a finding cannot close it**; the action owner cannot verify their own action; completion evidence must belong to the same engagement and not be rejected/superseded; requirement links must be in the engagement scope; finding edits use `updatedAt` compare-and-set; every change writes history and audit events. New permission `findings:remediate` (Security Analyst, Administrator): analysts do the work, auditors verify and close. Pages: `/findings`, `/findings/[findingId]`.
+- **Dashboard:** confirmed to use real, engagement-scoped database data; added active risks, risks by severity and overdue risk treatment actions, shown only for users with `risks:read`.
+- **Security/accessibility/localization:** CSP directives that cannot break Next.js inline scripts (`frame-ancestors 'none'`, `base-uri`, `form-action`, `object-src`), HSTS in production builds only, skip-to-content link, `engines.node >= 22.13.0`, read-only DB inspector (`npm run db:inspect`). English and Azerbaijani dictionaries kept in key parity by a test; **Azerbaijani wording still needs native review.**
+- `src/lib/schema-drift.test.ts` compares `schema.prisma` with the migrated database so a hand-written migration cannot silently diverge.
+
+### Verification actually run (sandbox)
+- `npx next typegen` + `tsc --noEmit`: clean. `eslint`: clean. `prisma validate`: valid (with a stub schema engine because the sandbox cannot download Prisma engines).
+- `npm test`: **110 tests, all passing** on repeated runs. One earlier full run showed a single failure in the `evidence storage` suite that did not reproduce (2 further full runs and 6 parallel isolated runs passed); cause unknown, watch for it.
+- `next build`: succeeded; new routes listed. `next start` HTTP smoke test (against a throwaway migrated DB): `/az/risks`, `/az/findings`, `/az/findings/x` redirect to login, `/api/evidence/x` returns 401 unauthenticated, security headers present.
+- **Not run here:** `prisma migrate status/deploy` (needs the schema engine), any browser or end-to-end test, anything against `data/dev.db`.
+
+### Security notes
+- `npm audit`: 9 high advisories, all in tooling chains. `prisma` → `@prisma/config` → `deepmerge-ts` (stack exhaustion, only when Prisma CLI loads `prisma.config.ts`, trusted input) and `prisma` → `mysql2` (credential/decompression issues only on MySQL connections, which this app never opens; it uses `better-sqlite3`). `eslint-config-next` → `@next/eslint-plugin-next` → `fast-glob`/`micromatch`/`braces` (glob DoS at lint time, trusted patterns). None is reachable from the running application. The only offered "fix" for the lint chain is downgrading `eslint-config-next` to 14.x, which was **not** applied. Run `npm audit fix` (no `--force`) locally, review the lockfile diff and re-run all checks.
+- `EBADENGINE`: `eslint-visitor-keys@5.0.1` needs Node `^20.19 || ^22.13 || >=24`; Node 22.12.0 is just below. Safest fix: update Node to the latest 22.x LTS (>= 22.13), no project change needed; `engines` now documents it.
+
 # Security Controls and Assessment Workflow (2026-10-15) — IMPLEMENTED; AUTHENTICATED BROWSER VERIFICATION PENDING
 
 ### Implemented

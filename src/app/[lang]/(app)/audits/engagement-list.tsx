@@ -94,7 +94,7 @@ export function EngagementList({
                 </div>
                 <div>
                   <dt className="text-xs text-ink-muted">{labels.assignedAuditor}</dt>
-                  <dd className="mt-1 text-ink">{row.members.length ? row.members.map(({ user }) => user.name).join(", ") : "—"}</dd>
+                  <dd className="mt-1 text-ink">{row.members.filter(({ user }) => user.role === "AUDITOR").map(({ user }) => user.name).join(", ") || "—"}</dd>
                 </div>
                 <div>
                   <dt className="text-xs text-ink-muted">{labels.updated}</dt>

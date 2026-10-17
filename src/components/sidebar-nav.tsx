@@ -12,6 +12,7 @@ import {
   Sparkles,
   TriangleAlert,
   Files,
+  ShieldAlert,
 } from "lucide-react";
 import type { Locale } from "@/i18n/config";
 import type { Role } from "@/lib/auth/authorization";
@@ -25,6 +26,7 @@ export interface NavLabels {
   evidence: string;
   aiReview: string;
   findings: string;
+  risks: string;
   reports: string;
   admin: string;
 }
@@ -37,6 +39,7 @@ const ITEMS = [
   { key: "evidence", path: "/evidence", icon: Files },
   { key: "aiReview", path: "/ai-review", icon: Sparkles },
   { key: "findings", path: "/findings", icon: TriangleAlert },
+  { key: "risks", path: "/risks", icon: ShieldAlert },
   { key: "reports", path: "/reports", icon: FileText },
   { key: "admin", path: "/admin", icon: Settings },
 ] as const;
@@ -61,7 +64,9 @@ export function SidebarNav({
             ? hasPermission(role, "users:manage")
             : key === "controls"
               ? hasPermission(role, "controls:read")
-              : true,
+              : key === "risks"
+                ? hasPermission(role, "risks:read")
+                : true,
         ).map(({ key, path, icon: Icon }) => {
           const href = `/${lang}${path}`;
           const active = path === "" ? pathname === href : pathname.startsWith(href);

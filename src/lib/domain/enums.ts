@@ -48,3 +48,50 @@ export type AiConfidence = (typeof AI_CONFIDENCE_LEVELS)[number];
 
 export const SEVERITIES = ["LOW", "MEDIUM", "HIGH", "CRITICAL"] as const;
 export type Severity = (typeof SEVERITIES)[number];
+
+// Risk register
+export const RISK_STATUSES = ["OPEN", "IN_TREATMENT", "ACCEPTED", "CLOSED"] as const;
+export type RiskStatus = (typeof RISK_STATUSES)[number];
+export const riskStatusSchema = z.enum(RISK_STATUSES);
+
+export const RISK_CATEGORIES = [
+  "GOVERNANCE",
+  "ACCESS_CONTROL",
+  "DATA_PROTECTION",
+  "NETWORK",
+  "THIRD_PARTY",
+  "BUSINESS_CONTINUITY",
+  "APPLICATION",
+  "OTHER",
+] as const;
+export type RiskCategory = (typeof RISK_CATEGORIES)[number];
+export const riskCategorySchema = z.enum(RISK_CATEGORIES);
+
+export const RISK_TREATMENTS = ["MITIGATE", "ACCEPT", "TRANSFER", "AVOID"] as const;
+export type RiskTreatment = (typeof RISK_TREATMENTS)[number];
+export const riskTreatmentSchema = z.enum(RISK_TREATMENTS);
+
+export const ASSET_TYPES = [
+  "APPLICATION",
+  "INFRASTRUCTURE",
+  "DATA",
+  "SERVICE",
+  "THIRD_PARTY",
+  "FACILITY",
+] as const;
+export type AssetType = (typeof ASSET_TYPES)[number];
+export const assetTypeSchema = z.enum(ASSET_TYPES);
+
+export const severitySchema = z.enum(SEVERITIES);
+
+export const TREATMENT_ACTION_STATUSES = ["OPEN", "IN_PROGRESS", "DONE", "CANCELLED"] as const;
+export type TreatmentActionStatus = (typeof TREATMENT_ACTION_STATUSES)[number];
+export const treatmentActionStatusSchema = z.enum(TREATMENT_ACTION_STATUSES);
+
+export const FINDING_STATUSES = ["OPEN", "IN_REMEDIATION", "READY_FOR_REVIEW", "CLOSED"] as const;
+export type FindingStatus = (typeof FINDING_STATUSES)[number];
+export const findingStatusSchema = z.enum(FINDING_STATUSES);
+
+export const REMEDIATION_STATUSES = ["OPEN", "IN_PROGRESS", "COMPLETED", "VERIFIED"] as const;
+export type RemediationStatus = (typeof REMEDIATION_STATUSES)[number];
+export const remediationStatusSchema = z.enum(REMEDIATION_STATUSES);

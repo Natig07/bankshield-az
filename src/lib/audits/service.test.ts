@@ -7,18 +7,23 @@ import Database from "better-sqlite3";
 import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
 import { PrismaClient } from "@/generated/prisma/client";
 import {
+  addEngagementParticipant,
   assignEngagementAuditor,
   createEngagement,
   DuplicateEngagementRecordError,
+  EngagementLockedError,
   engagementInputSchema,
   InvalidAuditorError,
   InvalidEngagementTransitionError,
+  InvalidParticipantError,
+  removeEngagementParticipant,
   selectEngagementRequirement,
   UnverifiedRequirementDecisionError,
   updateEngagement,
 } from "./service";
 import { transitionEngagement } from "./service";
 import type { Role } from "@/lib/auth/authorization";
+import { canAccessEngagement } from "@/lib/auth/resource-access";
 
 let prisma: PrismaClient;
 let testDirectory: string;
@@ -26,6 +31,8 @@ let auditorId: string;
 let secondAuditorId: string;
 let administratorId: string;
 let viewerId: string;
+let analystId: string;
+let inactiveAnalystId: string;
 
 before(async () => {
   testDirectory = mkdtempSync(join(tmpdir(), "bankshield-audits-tests-"));
@@ -45,8 +52,10 @@ before(async () => {
     prisma.user.create({ data: { email: "auditor-two@example.test", name: "Auditor Two", passwordHash: "test-hash", role: "AUDITOR" } }),
     prisma.user.create({ data: { email: "admin@example.test", name: "Admin", passwordHash: "test-hash", role: "ADMINISTRATOR" } }),
     prisma.user.create({ data: { email: "viewer@example.test", name: "Viewer", passwordHash: "test-hash", role: "READ_ONLY_REVIEWER" } }),
+    prisma.user.create({ data: { email: "analyst@example.test", name: "Analyst", passwordHash: "test-hash", role: "SECURITY_ANALYST" } }),
+    prisma.user.create({ data: { email: "inactive-analyst@example.test", name: "Inactive Analyst", passwordHash: "test-hash", role: "SECURITY_ANALYST", isActive: false } }),
   ]);
-  [auditorId, secondAuditorId, administratorId, viewerId] = users.map(({ id }) => id);
+  [auditorId, secondAuditorId, administratorId, viewerId, analystId, inactiveAnalystId] = users.map(({ id }) => id);
 });
 
 after(async () => {
@@ -237,4 +246,82 @@ test("requirement scope selection requires an explicit unverified decision and p
     acknowledgeUnverified: false,
     decisionNote: "",
   });
+});
+
+test("approved, archived and in-review engagements lock scope, metadata and assignment changes", async () => {
+  const created = await createEngagement(prisma, actor(auditorId, "AUDITOR"), validInput(auditorId));
+  const requirement = await createRequirement("VERIFIED");
+  const attempt = async () => {
+    await assert.rejects(updateEngagement(prisma, auditorId, created.id, validInput(auditorId)), EngagementLockedError);
+    await assert.rejects(
+      selectEngagementRequirement(prisma, auditorId, {
+        engagementId: created.id,
+        requirementId: requirement.id,
+        acknowledgeUnverified: false,
+        decisionNote: "",
+      }),
+      EngagementLockedError,
+    );
+    await assert.rejects(
+      assignEngagementAuditor(prisma, administratorId, { engagementId: created.id, auditorId: secondAuditorId }),
+      EngagementLockedError,
+    );
+  };
+  await transitionEngagement(prisma, auditorId, created.id, "IN_PROGRESS");
+  await transitionEngagement(prisma, auditorId, created.id, "IN_REVIEW");
+  await attempt();
+  await transitionEngagement(prisma, auditorId, created.id, "APPROVED");
+  await attempt();
+  await transitionEngagement(prisma, auditorId, created.id, "ARCHIVED");
+  await attempt();
+  assert.equal(await prisma.auditRequirementSelection.count({ where: { engagementId: created.id } }), 0);
+  assert.equal(await prisma.auditEngagementMember.count({ where: { engagementId: created.id, userId: secondAuditorId } }), 0);
+
+  await assert.rejects(
+    updateEngagement(prisma, auditorId, "missing-engagement", validInput(auditorId)),
+    /no longer exists/,
+  );
+});
+
+test("duplicate concurrent status transitions allow exactly one winner", async () => {
+  const created = await createEngagement(prisma, actor(auditorId, "AUDITOR"), validInput(auditorId));
+  await transitionEngagement(prisma, auditorId, created.id, "IN_PROGRESS");
+  // Two requests made from the same loaded state (IN_PROGRESS -> IN_REVIEW); the loser
+  // must be rejected instead of recording a second, impossible IN_PROGRESS -> IN_REVIEW.
+  const outcomes = await Promise.allSettled([
+    transitionEngagement(prisma, auditorId, created.id, "IN_REVIEW"),
+    transitionEngagement(prisma, auditorId, created.id, "IN_REVIEW"),
+  ]);
+  assert.equal(outcomes.filter(({ status }) => status === "fulfilled").length, 1);
+  const rejected = outcomes.find((outcome) => outcome.status === "rejected");
+  assert.ok(rejected && rejected.status === "rejected" && rejected.reason instanceof InvalidEngagementTransitionError);
+  const events = await prisma.auditEvent.count({ where: { entityId: created.id, action: "AUDIT_ENGAGEMENT_STATUS_CHANGED" } });
+  assert.equal(events, 2);
+});
+
+test("analysts join as participants without disturbing the auditor slot", async () => {
+  const created = await createEngagement(prisma, actor(auditorId, "AUDITOR"), validInput(auditorId));
+  await assert.rejects(addEngagementParticipant(prisma, administratorId, { engagementId: created.id, userId: secondAuditorId }), InvalidParticipantError);
+  await assert.rejects(addEngagementParticipant(prisma, administratorId, { engagementId: created.id, userId: viewerId }), InvalidParticipantError);
+  await assert.rejects(addEngagementParticipant(prisma, administratorId, { engagementId: created.id, userId: inactiveAnalystId }), InvalidParticipantError);
+  await addEngagementParticipant(prisma, administratorId, { engagementId: created.id, userId: analystId });
+  await assert.rejects(
+    addEngagementParticipant(prisma, administratorId, { engagementId: created.id, userId: analystId }),
+    DuplicateEngagementRecordError,
+  );
+  assert.equal(await canAccessEngagement(prisma, { id: analystId, role: "SECURITY_ANALYST" }, created.id), true);
+
+  // Reassigning the auditor replaces the auditor, not the analyst who joined later.
+  await assignEngagementAuditor(prisma, administratorId, { engagementId: created.id, auditorId: secondAuditorId });
+  const members = await prisma.auditEngagementMember.findMany({ where: { engagementId: created.id } });
+  assert.deepEqual(members.map(({ userId }) => userId).sort(), [analystId, secondAuditorId].sort());
+
+  await assert.rejects(removeEngagementParticipant(prisma, administratorId, { engagementId: created.id, userId: secondAuditorId }), InvalidParticipantError);
+  await removeEngagementParticipant(prisma, administratorId, { engagementId: created.id, userId: analystId });
+  assert.equal(await canAccessEngagement(prisma, { id: analystId, role: "SECURITY_ANALYST" }, created.id), false);
+  assert.equal(await prisma.auditEvent.count({ where: { entityId: created.id, action: { in: ["AUDIT_ENGAGEMENT_PARTICIPANT_ADDED", "AUDIT_ENGAGEMENT_PARTICIPANT_REMOVED"] } } }), 2);
+
+  await transitionEngagement(prisma, secondAuditorId, created.id, "IN_PROGRESS");
+  await transitionEngagement(prisma, secondAuditorId, created.id, "IN_REVIEW");
+  await assert.rejects(addEngagementParticipant(prisma, administratorId, { engagementId: created.id, userId: analystId }), EngagementLockedError);
 });

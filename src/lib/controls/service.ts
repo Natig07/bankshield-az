@@ -5,6 +5,7 @@ import { assertRolePermission, type Role } from "@/lib/auth/authorization";
 import { validateApproval, validateAssessment } from "@/lib/domain/assessment";
 import { assessmentStatusSchema } from "@/lib/domain/enums";
 import { isDatabaseConstraintError } from "@/lib/auth/service";
+import { assertEngagementOperation } from "@/lib/audits/service";
 
 const controlSchema = z.object({
   code: z.string().trim().min(2).max(40).regex(/^[A-Za-z0-9][A-Za-z0-9._-]*$/).transform((value) => value.toUpperCase()),
@@ -20,7 +21,13 @@ const mappingSchema = z.object({
   rationale: z.string().trim().min(10).max(2_000),
 });
 
+// Evidence in these review states can no longer support an assessment.
+const UNUSABLE_EVIDENCE_STATES = ["REJECTED", "SUPERSEDED"];
+
 const assessmentRevisionSchema = z.object({
+  // The revision number the author was looking at (0 when nothing was recorded yet).
+  // A mismatch means someone else saved a revision in the meantime.
+  expectedVersion: z.number().int().min(0),
   status: assessmentStatusSchema,
   notApplicableReason: z.string().trim().max(2_000).nullable(),
   evidenceIds: z.array(z.string().min(1)).max(50).default([]),
@@ -85,6 +92,20 @@ export class InvalidAssessmentTransitionError extends Error {
   constructor() {
     super("An approved or superseded assessment cannot be changed in place.");
     this.name = "InvalidAssessmentTransitionError";
+  }
+}
+
+export class StaleAssessmentRevisionError extends Error {
+  constructor() {
+    super("The assessment changed since it was loaded. Reload and review the latest revision.");
+    this.name = "StaleAssessmentRevisionError";
+  }
+}
+
+export class IndependentApprovalRequiredError extends Error {
+  constructor() {
+    super("An assessment must be approved by someone other than the person who recorded it.");
+    this.name = "IndependentApprovalRequiredError";
   }
 }
 
@@ -226,12 +247,14 @@ export async function createAssessmentRevision(
         select: { id: true, engagementId: true, controlId: true },
       });
       if (!scopeItem || scopeItem.engagementId !== engagementId) throw new ControlRecordNotFoundError();
+      await assertEngagementOperation(tx, engagementId, "assessControl");
 
       if (data.evidenceIds.length) {
         const validEvidence = await tx.evidenceDocument.findMany({
           where: {
             id: { in: data.evidenceIds },
             engagementId: scopeItem.engagementId,
+            reviewStatus: { notIn: UNUSABLE_EVIDENCE_STATES },
             OR: [{ controlId: null }, { controlId: scopeItem.controlId }],
           },
           select: { id: true },
@@ -244,6 +267,7 @@ export async function createAssessmentRevision(
         orderBy: { version: "desc" },
         select: { version: true },
       });
+      if ((latest?.version ?? 0) !== data.expectedVersion) throw new StaleAssessmentRevisionError();
       await tx.controlAssessment.updateMany({
         where: { scopeItemId, isCurrent: true },
         data: { isCurrent: false },
@@ -302,12 +326,23 @@ export async function approveAssessment(
         notApplicableReason: true,
         isCurrent: true,
         approvedAt: true,
+        assessedById: true,
         scopeItem: { select: { engagementId: true } },
-        _count: { select: { evidenceLinks: true } },
+        _count: {
+          select: {
+            evidenceLinks: { where: { evidence: { reviewStatus: { notIn: UNUSABLE_EVIDENCE_STATES } } } },
+          },
+        },
       },
     });
     if (!assessment || assessment.scopeItem.engagementId !== engagementId) throw new ControlRecordNotFoundError();
+    await assertEngagementOperation(tx, engagementId, "approveAssessment");
     if (!assessment.isCurrent || assessment.approvedAt) throw new InvalidAssessmentTransitionError();
+    // Maker-checker: the person who recorded this revision cannot also approve it.
+    // Revisions recorded before this rule existed have no recorded author and stay approvable.
+    if (assessment.assessedById && assessment.assessedById === actor.id) {
+      throw new IndependentApprovalRequiredError();
+    }
     const errors = validateApproval({
       status: assessmentStatusSchema.parse(assessment.status),
       justification: data.justification,

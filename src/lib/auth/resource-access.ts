@@ -3,7 +3,7 @@ import type { AuthUser } from "./service";
 
 export async function canAccessEngagement(
   db: PrismaClient,
-  user: AuthUser,
+  user: Pick<AuthUser, "id" | "role">,
   engagementId: string,
 ): Promise<boolean> {
   if (user.role === "ADMINISTRATOR") return true;

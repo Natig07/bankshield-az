@@ -7,7 +7,9 @@ import type { VerificationStatus } from "@/lib/domain/enums";
 import { canTransitionEngagementStatus, ENGAGEMENT_STATUSES } from "@/lib/audits/workflow";
 import { AssessmentWorkflow } from "./assessment-workflow";
 import {
+  addParticipantAction,
   assignAuditorAction,
+  removeParticipantAction,
   selectRequirementAction,
   transitionEngagementAction,
   updateEngagementAction,
@@ -31,7 +33,7 @@ type Detail = {
   members: {
     id: string;
     createdAt: Date;
-    user: { id: string; name: string; email: string; isActive: boolean };
+    user: { id: string; name: string; email: string; isActive: boolean; role: string };
   }[];
   requirementSelections: {
     id: string;
@@ -97,10 +99,12 @@ export function EngagementDetails({
   auditors,
   canManage,
   canAssignAuditors,
+  analysts,
   assessmentData,
   assessmentLabels,
   assessmentStatuses,
   canAssess,
+  currentUserId,
 }: {
   lang: string;
   labels: Labels;
@@ -110,10 +114,12 @@ export function EngagementDetails({
   auditors: Auditor[];
   canManage: boolean;
   canAssignAuditors: boolean;
+  analysts: Auditor[];
   assessmentData: AssessmentData;
   assessmentLabels: Dictionary["assessmentWorkflow"];
   assessmentStatuses: Dictionary["dashboard"]["assessmentStatuses"];
   canAssess: boolean;
+  currentUserId: string;
 }) {
   const currentStatus = engagement.status;
   const assessed = engagement.scopeItems.filter((item) =>
@@ -121,6 +127,8 @@ export function EngagementDetails({
   ).length;
   const openFindings = engagement.findings.filter((finding) => finding.status !== "CLOSED").length;
   const availableAuditors = auditors.filter(({ id }) => !engagement.members.some((member) => member.user.id === id));
+  const participants = engagement.members.filter(({ user }) => user.role === "SECURITY_ANALYST");
+  const availableAnalysts = analysts.filter(({ id }) => !engagement.members.some((member) => member.user.id === id));
 
   return (
     <div className="space-y-6">
@@ -139,7 +147,7 @@ export function EngagementDetails({
           <Info label={labels.period}>{formatDate(engagement.periodStart, lang)} – {formatDate(engagement.periodEnd, lang)}</Info>
           <Info label={labels.createdBy}>{engagement.createdBy.name}</Info>
           <Info label={labels.assignedAuditor}>
-            {engagement.members.length ? engagement.members.map(({ user }) => user.name).join(", ") : "—"}
+            {engagement.members.filter(({ user }) => user.role === "AUDITOR").map(({ user }) => user.name).join(", ") || "—"}
           </Info>
           <Info label={labels.updated}>{formatDate(engagement.updatedAt, lang)}</Info>
           <Info label={labels.scope}>{engagement.scope}</Info>
@@ -149,6 +157,16 @@ export function EngagementDetails({
             <EditEngagementForm engagement={engagement} lang={lang} labels={labels} />
             <StatusForm engagement={engagement} lang={lang} labels={labels} />
           </div>
+        )}
+        {(canAssignAuditors || participants.length > 0) && (
+          <ParticipantsSection
+            lang={lang}
+            engagementId={engagement.id}
+            labels={labels}
+            participants={participants.map(({ user }) => user)}
+            available={availableAnalysts}
+            canManage={canAssignAuditors}
+          />
         )}
         {canAssignAuditors && (
           <AssignAuditorForm
@@ -163,7 +181,7 @@ export function EngagementDetails({
       <section className="grid gap-4 sm:grid-cols-3" aria-label={labels.detailsTitle}>
         <Metric label={labels.assessmentProgress} value={`${assessed} / ${engagement.scopeItems.length}`} detail={labels.assessments} />
         <Metric label={labels.openFindings} value={openFindings} detail={`${labels.findings}: ${engagement.findings.length}`} />
-        <Metric label={labels.evidence} value={engagement._count.evidence} />
+        <Metric label={labels.evidence} value={engagement._count.evidence} href={`/${lang}/evidence?engagement=${engagement.id}`} />
       </section>
 
       <AssessmentWorkflow
@@ -175,6 +193,7 @@ export function EngagementDetails({
         scopeItems={assessmentData.scopeItems}
         evidence={assessmentData.evidence}
         canAssess={canAssess}
+        currentUserId={currentUserId}
       />
 
       <section className="space-y-4 rounded-lg border border-line bg-surface p-5">
@@ -434,13 +453,72 @@ function Info({ label, children }: { label: string; children: React.ReactNode })
   );
 }
 
-function Metric({ label, value, detail }: { label: string; value: string | number; detail?: string }) {
+function Metric({ label, value, detail, href }: { label: string; value: string | number; detail?: string; href?: string }) {
   return (
     <article className="rounded-lg border border-line bg-surface p-5">
       <p className="text-sm text-ink-muted">{label}</p>
       <p className="mt-2 text-3xl font-semibold text-ink">{value}</p>
       {detail && <p className="mt-1 text-xs text-ink-muted">{detail}</p>}
+      {href && <Link href={href} className="mt-2 inline-block text-xs text-teal-strong underline underline-offset-2">{label}</Link>}
     </article>
+  );
+}
+
+function ParticipantsSection({
+  lang,
+  engagementId,
+  labels,
+  participants,
+  available,
+  canManage,
+}: {
+  lang: string;
+  engagementId: string;
+  labels: Labels;
+  participants: Auditor[];
+  available: Auditor[];
+  canManage: boolean;
+}) {
+  const [addState, addAction, adding] = useActionState<EngagementActionState, FormData>(addParticipantAction, null);
+  const [removeState, removeAction, removing] = useActionState<EngagementActionState, FormData>(removeParticipantAction, null);
+  return (
+    <section className="mt-5 border-t border-line pt-4" aria-labelledby="participants-title">
+      <h2 id="participants-title" className="text-sm font-medium text-ink">{labels.participants}</h2>
+      <p className="mt-1 text-xs text-ink-muted">{labels.participantsHint}</p>
+      {participants.length === 0 ? (
+        <p className="mt-2 text-sm text-ink-muted">{labels.noParticipants}</p>
+      ) : (
+        <ul className="mt-2 space-y-2">
+          {participants.map((person) => (
+            <li key={person.id} className="flex flex-wrap items-center gap-3 text-sm text-ink">
+              <span>{person.name} ({person.email})</span>
+              {canManage && (
+                <form action={removeAction}>
+                  <input type="hidden" name="lang" value={lang} />
+                  <input type="hidden" name="engagementId" value={engagementId} />
+                  <input type="hidden" name="userId" value={person.id} />
+                  <button type="submit" disabled={removing} className="rounded-md border border-line px-2 py-1 text-xs text-ink disabled:opacity-60">{labels.removeParticipant}</button>
+                </form>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+      {canManage && (
+        <form action={addAction} className="mt-3 flex flex-wrap gap-2">
+          <input type="hidden" name="lang" value={lang} />
+          <input type="hidden" name="engagementId" value={engagementId} />
+          <label htmlFor="add-participant" className="sr-only">{labels.addParticipant}</label>
+          <select id="add-participant" name="userId" required disabled={available.length === 0} className="min-w-64 rounded-md border border-line bg-surface px-3 py-2 text-sm text-ink">
+            <option value="">{labels.chooseParticipant}</option>
+            {available.map((person) => <option key={person.id} value={person.id}>{person.name} ({person.email})</option>)}
+          </select>
+          <button type="submit" disabled={adding || available.length === 0} className="rounded-md bg-navy-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-60">{adding ? labels.addingParticipant : labels.addParticipant}</button>
+          {available.length === 0 && <p className="w-full text-xs text-ink-muted">{labels.noAnalysts}</p>}
+        </form>
+      )}
+      <div className="mt-2" role="status"><Feedback state={removeState ?? addState} labels={labels} /></div>
+    </section>
   );
 }
 

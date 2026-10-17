@@ -6,7 +6,7 @@ Bilingual (Azerbaijani and English) cybersecurity compliance and audit support p
 
 ## Current state
 
-The bilingual UI requires an active account. Login and logout use Argon2id verification and revocable SQLite-backed sessions. Administrators can manage users, the security control catalogue, and requirement mappings. The Regulatory Library supports source, version, and requirement maintenance with review history. Audit engagements support scoped access, auditor assignment, requirement selection, status history, control assessment revisions, approval, and assessment-specific references to existing evidence metadata. Evidence upload/storage, findings/remediation, reporting, and AI analysis are not implemented.
+The bilingual UI requires an active account. Login and logout use Argon2id verification and revocable SQLite-backed sessions. Administrators can manage users, the security control catalogue, and requirement mappings. The Regulatory Library supports source, version, and requirement maintenance with review history. Audit engagements support scoped access, auditor assignment, requirement selection, status history, control assessment revisions, approval, and assessment-specific references to existing evidence metadata. Evidence upload, review and authorized download, a Risk Register, and findings with remediation tracking are implemented and covered by tests on isolated databases. Reporting and AI analysis are not implemented. Nothing has been verified in a browser or end-to-end; see NEXT_STEPS.md for the manual checklist.
 
 ## Run it locally
 
@@ -60,7 +60,10 @@ npm run typecheck   # generates Next route types, then tsc
 npm run lint
 npm test            # unit tests (node:test via tsx)
 npm run build
+npm run db:inspect  # read-only: table row counts and migration state of DATABASE_URL
 ```
+
+Node 22.13 or newer is required (`engines`).
 
 ## Database commands
 
@@ -77,8 +80,8 @@ The local database is `data/dev.db`; generated client files are under `src/gener
 ## Role permissions
 
 - **Administrator:** all application permissions, including user management.
-- **Auditor:** manage engagements, assessments, findings, and reports; read regulatory and evidence records.
-- **Security Analyst:** manage evidence and control assessments, and read permitted audit and finding records.
+- **Auditor:** manage engagements, assessments, findings, and reports; review evidence; read regulatory and risk records. Cannot upload evidence or accept risks.
+- **Security Analyst:** manage evidence, control assessments and risks, carry out remediation actions (`findings:remediate`), and read permitted audit and finding records. Cannot review evidence, approve their own assessments, verify actions or manage findings.
 - **Read-Only Reviewer:** read permitted records only.
 
 Control catalogue and requirement-mapping management (`controls:manage`) is Administrator-only. The Auditor and Security Analyst may assess controls (`controls:assess`) only within engagements they can access. Every application page checks its permission on the server. Every mutating Server Action checks the permission again; engagement data access must also go through the membership-aware DAL. The sidebar is only a convenience, not an authorization control.
@@ -111,9 +114,21 @@ On an engagement detail page, Auditor/Security Analyst users with `controls:asse
 
 Migration `20261015191722_control_assessment_evidence` adds `ControlAssessmentEvidence` and a SQLite partial unique index that enforces at most one current assessment per scope item without preventing multiple historical revisions. It was applied additively; the existing development database had no duplicated current assessment rows, and no application records were seeded or changed.
 
-Evidence upload, private storage, authorized download, and evidence review remain unimplemented. Assessment evidence links identify selected metadata records; they do not verify file contents or establish a compliance conclusion. The current rules do not require an independent approver, so a permitted assessor can approve their own assessment; decide whether maker-checker separation is required before operational use. Mapping does not change regulatory verification state. The dashboard does not show a compliance percentage.
+Assessment approval requires an approver different from the assessor. Assessment evidence links identify selected evidence records; they do not verify file contents or establish a compliance conclusion. Mapping does not change regulatory verification state. The dashboard does not show a compliance percentage.
 
 The additive migration `20261015124511_audit_engagement_workflow` adds the audited-organisation column and the unique requirement-selection record. Existing engagement rows are preserved; older rows receive an empty organisation value until an authorised user updates their metadata. Do not reset or recreate the database to apply it.
+
+## Evidence
+
+Analysts upload evidence to an engagement that is in Draft or In progress (PDF, Office documents, images, text or CSV; maximum 10 MB; the real file signature must match the extension). Files are stored under `EVIDENCE_STORAGE_DIR` (default `storage-local/`, gitignored) with server-generated opaque names; the original filename is display-only. Auditors review evidence, and the reviewer must differ from the uploader. Download goes through `/api/evidence/[evidenceId]`, which checks the session and engagement access and sends the file as an attachment with `nosniff`. There is no malware scanning; treat uploaded files as untrusted and back up the storage folder together with the database.
+
+## Risk register
+
+`/risks` lists risks with severity bands computed from likelihood × impact (1–5 scale; scores are never stored) and a note saying whether the inherent or residual score is shown. Analysts and administrators create and edit risks, assets, control links and treatment actions. Accepting a risk is administrator-only and needs a justification, residual scores and a future review date. Closing needs every treatment action finished. Each change appends a history row. Migration `20261016100000_risk_register` is additive.
+
+## Findings and remediation
+
+Auditors record findings in engagements that are In progress or In review, plan remediation actions, and move a finding Open → In remediation → Ready for review → Closed. Analysts carry the actions through In progress → Completed (optionally citing same-engagement evidence); an auditor verifies each action and an auditor other than the finding's creator closes it. There is no schema change for this feature. History and audit events are appended for every change.
 
 ## Project documents
 

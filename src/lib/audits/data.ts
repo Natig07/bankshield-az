@@ -5,14 +5,25 @@ import { ENGAGEMENT_STATUSES } from "./workflow";
 
 export type EngagementFilters = { search: string; status: string };
 
+type RawParam = string | string[] | undefined;
+
+function firstParam(value: RawParam): string {
+  return (Array.isArray(value) ? value[0] : value) ?? "";
+}
+
+// Accepts Next.js `searchParams` directly. The search form submits the text filter as
+// `q`; `search` is kept as an alias for programmatic callers. Repeated parameters
+// (`?q=a&q=b`) are reduced to the first value instead of being stringified.
 export function normalizeEngagementFilters(input: {
-  search?: string;
-  status?: string;
+  q?: RawParam;
+  search?: RawParam;
+  status?: RawParam;
 }): EngagementFilters {
+  const status = firstParam(input.status);
   return {
-    search: (input.search ?? "").trim().slice(0, 120),
-    status: ENGAGEMENT_STATUSES.includes(input.status as (typeof ENGAGEMENT_STATUSES)[number])
-      ? input.status!
+    search: (firstParam(input.q) || firstParam(input.search)).trim().slice(0, 120),
+    status: ENGAGEMENT_STATUSES.includes(status as (typeof ENGAGEMENT_STATUSES)[number])
+      ? status
       : "ALL",
   };
 }
@@ -55,7 +66,7 @@ export async function getEngagementList(
       updatedAt: true,
       members: {
         orderBy: { createdAt: "asc" },
-        select: { user: { select: { id: true, name: true, email: true } } },
+        select: { user: { select: { id: true, name: true, email: true, role: true } } },
       },
     },
   });
@@ -95,7 +106,7 @@ export async function getEngagementDetails(
         select: {
           id: true,
           createdAt: true,
-          user: { select: { id: true, name: true, email: true, isActive: true } },
+          user: { select: { id: true, name: true, email: true, isActive: true, role: true } },
         },
       },
       requirementSelections: {
