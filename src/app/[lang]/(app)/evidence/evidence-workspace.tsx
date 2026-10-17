@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useActionState, useState } from "react";
 import type { Dictionary } from "@/i18n/get-dictionary";
+import { MAX_EVIDENCE_BYTES } from "@/lib/evidence/validation";
 import {
   reviewEvidenceAction,
   uploadEvidenceAction,
@@ -170,7 +171,15 @@ function UploadForm({
           </div>
           <div>
             <label htmlFor="upload-file" className="mb-1 block text-sm font-medium text-ink">{labels.file}</label>
-            <input id="upload-file" name="file" type="file" required accept=".pdf,.png,.jpg,.jpeg,.docx,.xlsx,.txt,.csv" aria-describedby="upload-file-hint" className="w-full rounded-md border border-line bg-surface px-3 py-2 text-sm text-ink" />
+            <input id="upload-file" name="file" type="file" required accept=".pdf,.png,.jpg,.jpeg,.docx,.xlsx,.txt,.csv" aria-describedby="upload-file-hint" onChange={(event) => {
+              // Files above the Server Action body limit would be refused by the framework with a
+              // generic full-page error, so oversized files are stopped here with the app's own
+              // message. The server still enforces the limit independently.
+              const input = event.currentTarget;
+              const file = input.files?.[0];
+              input.setCustomValidity(file && file.size > MAX_EVIDENCE_BYTES ? labels.errors.tooLarge : "");
+              if (!input.validity.valid) input.reportValidity();
+            }} className="w-full rounded-md border border-line bg-surface px-3 py-2 text-sm text-ink" />
             <p id="upload-file-hint" className="mt-1 text-xs text-ink-muted">{labels.fileHint}</p>
           </div>
           <div>
