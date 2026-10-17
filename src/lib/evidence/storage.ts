@@ -1,6 +1,6 @@
 import "server-only";
 import { randomBytes } from "node:crypto";
-import { lstat, mkdir, open, readFile, rename, rm } from "node:fs/promises";
+import { lstat, mkdir, open, readFile, realpath, rename, rm } from "node:fs/promises";
 import path from "node:path";
 
 // Private evidence file storage.
@@ -61,6 +61,17 @@ function locate(storage: EvidenceStorage, key: string): string {
   return target;
 }
 
+// The lexical check in locate() cannot see symbolic links (or Windows junctions) planted
+// inside the store, for example a shard directory that points elsewhere. Resolve the real
+// location of the shard directory and require it to stay inside the real storage root.
+// The directory must exist; callers handle ENOENT. This does not remove the small window
+// between check and use, so the storage directory must also be writable only by the
+// application's service account.
+async function assertShardInsideRoot(storage: EvidenceStorage, target: string): Promise<void> {
+  const [realRoot, realShard] = await Promise.all([realpath(storage.root), realpath(path.dirname(target))]);
+  if (!isInside(realRoot, realShard)) throw new EvidenceStorageError("invalidKey");
+}
+
 // Writes atomically: a temporary file is created exclusively (never overwriting), flushed,
 // then renamed into place, so a crash cannot leave a half-written evidence file.
 export async function writeEvidenceFile(
@@ -72,6 +83,7 @@ export async function writeEvidenceFile(
   const temporary = `${target}.${randomBytes(6).toString("hex")}.tmp`;
   try {
     await mkdir(path.dirname(target), { recursive: true, mode: 0o700 });
+    await assertShardInsideRoot(storage, target);
     const handle = await open(temporary, "wx", 0o600);
     try {
       await handle.writeFile(bytes);
@@ -80,15 +92,19 @@ export async function writeEvidenceFile(
       await handle.close();
     }
     await rename(temporary, target);
-  } catch {
-    await rm(temporary, { force: true }).catch(() => undefined);
-    throw new EvidenceStorageError("io");
+  } catch (error) {
+    // Only ever remove the temporary file when its directory was verified to be in the store.
+    if (!(error instanceof EvidenceStorageError)) {
+      await rm(temporary, { force: true }).catch(() => undefined);
+    }
+    throw error instanceof EvidenceStorageError ? error : new EvidenceStorageError("io");
   }
 }
 
 export async function readEvidenceFile(storage: EvidenceStorage, key: string): Promise<Buffer> {
   const target = locate(storage, key);
   try {
+    await assertShardInsideRoot(storage, target);
     // Refuse anything that is not a plain file (for example a symlink planted in the store).
     const stats = await lstat(target);
     if (!stats.isFile()) throw new EvidenceStorageError("notFound");
@@ -102,5 +118,11 @@ export async function readEvidenceFile(storage: EvidenceStorage, key: string): P
 
 export async function deleteEvidenceFile(storage: EvidenceStorage, key: string): Promise<void> {
   const target = locate(storage, key);
+  try {
+    await assertShardInsideRoot(storage, target);
+  } catch (error) {
+    if (error instanceof EvidenceStorageError) throw error;
+    return; // shard directory missing: nothing stored under this key
+  }
   await rm(target, { force: true }).catch(() => undefined);
 }
