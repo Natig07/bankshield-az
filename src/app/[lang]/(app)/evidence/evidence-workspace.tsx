@@ -10,6 +10,8 @@ import {
   type EvidenceActionState,
 } from "./actions";
 import { formatDate } from "@/lib/format/date";
+import { EngagementLockNotice } from "@/components/engagement-lock-notice";
+import { engagementAllows } from "@/lib/audits/workflow";
 
 type Labels = Dictionary["evidenceWorkflow"];
 type Record = {
@@ -41,6 +43,7 @@ export function EvidenceWorkspace({
   canReview,
   currentUserId,
   storageConfigured,
+  lockMessages,
 }: {
   lang: string;
   labels: Labels;
@@ -52,6 +55,7 @@ export function EvidenceWorkspace({
   canReview: boolean;
   currentUserId: string;
   storageConfigured: boolean;
+  lockMessages: { [status: string]: string };
 }) {
   return (
     <div className="space-y-6">
@@ -114,7 +118,9 @@ export function EvidenceWorkspace({
                     {labels.download}
                   </a>
                   {canReview && record.reviewStatus === "PENDING_REVIEW" && (
-                    record.uploadedById === currentUserId ? (
+                    !engagementAllows(record.engagement.status, "reviewEvidence") ? (
+                      <div className="min-w-64 flex-1"><EngagementLockNotice status={record.engagement.status} messages={lockMessages} /></div>
+                    ) : record.uploadedById === currentUserId ? (
                       <p className="text-sm text-ink-muted">{labels.independentNotice}</p>
                     ) : (
                       <ReviewForm lang={lang} labels={labels} evidenceId={record.id} />

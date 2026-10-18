@@ -9,6 +9,7 @@ import {
   type ControlActionState,
 } from "../../controls/actions";
 import { formatDate } from "@/lib/format/date";
+import { UNUSABLE_EVIDENCE_STATES } from "@/lib/domain/assessment";
 
 type Labels = Dictionary["assessmentWorkflow"];
 type Evidence = {
@@ -56,6 +57,7 @@ export function AssessmentWorkflow({
   scopeItems,
   evidence,
   canAssess,
+  canApprove,
   currentUserId,
 }: {
   lang: string;
@@ -66,6 +68,7 @@ export function AssessmentWorkflow({
   scopeItems: ScopeItem[];
   evidence: Evidence[];
   canAssess: boolean;
+  canApprove: boolean;
   currentUserId: string;
 }) {
   return (
@@ -75,7 +78,9 @@ export function AssessmentWorkflow({
         <p className="rounded-lg border border-dashed border-line bg-surface p-5 text-sm text-ink-muted">{labels.emptyScope}</p>
       ) : (
         scopeItems.map((scopeItem) => {
-          const eligibleEvidence = evidence.filter((record) => record.controlId === null || record.controlId === scopeItem.control.id);
+          const eligibleEvidence = evidence.filter(
+            (record) => (record.controlId === null || record.controlId === scopeItem.control.id) && !UNUSABLE_EVIDENCE_STATES.includes(record.reviewStatus),
+          );
           return (
             <article key={scopeItem.id} className="rounded-lg border border-line bg-surface p-5">
               <header className="flex flex-wrap items-start justify-between gap-3">
@@ -128,10 +133,10 @@ export function AssessmentWorkflow({
                           ))}
                         </ul>
                       )}
-                      {canAssess && assessment.isCurrent && !assessment.approvedAt && assessment.assessedById === currentUserId && (
+                      {canApprove && assessment.isCurrent && !assessment.approvedAt && assessment.assessedById === currentUserId && (
                         <p className="mt-3 border-t border-line pt-3 text-sm text-ink-muted">{labels.independentApprovalNotice}</p>
                       )}
-                      {canAssess && assessment.isCurrent && !assessment.approvedAt && assessment.assessedById !== currentUserId && (
+                      {canApprove && assessment.isCurrent && !assessment.approvedAt && assessment.assessedById !== currentUserId && (
                         <ApproveForm
                           lang={lang}
                           engagementId={engagementId}

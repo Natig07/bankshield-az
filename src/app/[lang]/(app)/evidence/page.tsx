@@ -50,6 +50,7 @@ export default async function EvidencePage({
       selectedEngagement={requested ?? ""}
       canUpload={canUpload}
       canReview={canReview}
+      lockMessages={dict.common.engagementLock}
       currentUserId={user.id}
       storageConfigured={Boolean(process.env.EVIDENCE_STORAGE_DIR?.trim())}
     />

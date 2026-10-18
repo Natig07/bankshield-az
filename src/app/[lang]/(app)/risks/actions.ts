@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { ZodError } from "zod";
+import { fieldIssues, type FieldIssue } from "@/lib/risks/field-errors";
 import { hasLocale } from "@/i18n/config";
 import { requirePermission } from "@/lib/auth/dal";
 import { getPrisma } from "@/lib/db";
@@ -42,6 +43,8 @@ export type RiskActionState =
         | "needsNote";
       success?: "created" | "saved" | "statusChanged" | "actionAdded" | "actionUpdated" | "linked" | "unlinked" | "assetCreated";
       riskId?: string;
+      // Present for create/update risk: which fields failed validation and why.
+      fields?: FieldIssue[];
     }
   | null;
 
@@ -100,6 +103,7 @@ async function run(
   formData: FormData,
   permission: "risks:manage",
   work: (actor: Awaited<ReturnType<typeof requirePermission>>, lang: string) => Promise<NonNullable<RiskActionState>>,
+  options: { fieldErrors?: boolean } = {},
 ): Promise<RiskActionState> {
   const actor = await requirePermission(permission);
   const lang = localeOf(formData);
@@ -111,6 +115,7 @@ async function run(
     if (result.riskId) revalidatePath(`/${lang}/risks/${result.riskId}`);
     return result;
   } catch (error) {
+    if (options.fieldErrors && error instanceof ZodError) return { error: "invalidInput", fields: fieldIssues(error) };
     const code = knownError(error);
     if (code) return { error: code };
     throw error;
@@ -121,7 +126,7 @@ export async function createRiskAction(_previous: RiskActionState, formData: For
   return run(formData, "risks:manage", async (actor) => {
     const created = await createRisk(getPrisma(), actor, riskFields(formData));
     return { success: "created", riskId: created.id };
-  });
+  }, { fieldErrors: true });
 }
 
 export async function updateRiskAction(_previous: RiskActionState, formData: FormData): Promise<RiskActionState> {
@@ -129,7 +134,7 @@ export async function updateRiskAction(_previous: RiskActionState, formData: For
     const riskId = text(formData, "riskId");
     await updateRisk(getPrisma(), actor, riskId, { ...riskFields(formData), expectedRevision: integer(formData, "expectedRevision") });
     return { success: "saved", riskId };
-  });
+  }, { fieldErrors: true });
 }
 
 export async function transitionRiskAction(_previous: RiskActionState, formData: FormData): Promise<RiskActionState> {

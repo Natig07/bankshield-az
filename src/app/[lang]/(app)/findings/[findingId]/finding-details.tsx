@@ -13,12 +13,14 @@ import {
 } from "../actions";
 import { Feedback, FindingFields, input, primary, secondary, severityClass, type Labels } from "../finding-fields";
 import { formatDate } from "@/lib/format/date";
+import { EngagementLockNotice } from "@/components/engagement-lock-notice";
+import { engagementAllows } from "@/lib/audits/workflow";
 
 type Finding = {
   id: string; title: string; description: string; severity: string; status: string; requirementId: string | null;
   inherentLikelihood: number | null; inherentImpact: number | null; residualLikelihood: number | null; residualImpact: number | null;
   inherentScore: number | null; residualScore: number | null; updatedAtMs: number; updatedAt: string;
-  engagement: { id: string; title: string };
+  engagement: { id: string; title: string; status: string };
   requirement: { clauseId: string; topic: string | null } | null;
   requirements: { id: string; clauseId: string; topic: string | null }[];
   evidence: { id: string; originalName: string }[];
@@ -28,10 +30,14 @@ type Finding = {
 
 const fmt = formatDate;
 
-export function FindingDetails({ lang, labels, canManage, canRemediate, isCreator, finding }: {
-  lang: string; labels: Labels; canManage: boolean; canRemediate: boolean; isCreator: boolean; finding: Finding;
+export function FindingDetails({ lang, labels, canManage, canRemediate, isCreator, finding, lockMessages }: {
+  lang: string; labels: Labels; canManage: boolean; canRemediate: boolean; isCreator: boolean; finding: Finding; lockMessages: Record<string, string>;
 }) {
-  const editable = isFindingEditable(finding.status);
+  // Mirrors the server-side engagement gates; the server remains the authority.
+  const engagementStatus = finding.engagement.status;
+  const findingsOpen = engagementAllows(engagementStatus, "manageFindings");
+  const remediationOpen = engagementAllows(engagementStatus, "manageRemediation");
+  const editable = isFindingEditable(finding.status) && findingsOpen;
   return (
     <div className="space-y-6">
       <Link href={`/${lang}/findings`} className="text-sm text-teal-strong underline-offset-2 hover:underline">← {labels.backToList}</Link>
@@ -51,9 +57,10 @@ export function FindingDetails({ lang, labels, canManage, canRemediate, isCreato
         {labels.fields.inherent}: {finding.inherentScore ?? labels.fields.notAssessed} · {labels.fields.residual}: {finding.residualScore ?? labels.fields.notAssessed}
       </p>
 
-      {canManage && !editable && <p className="rounded-md border border-line bg-surface p-3 text-sm text-ink-muted">{labels.lockedNotice}</p>}
+      {(canManage || canRemediate) && !(findingsOpen && remediationOpen) && <EngagementLockNotice status={engagementStatus} messages={lockMessages} />}
+      {canManage && findingsOpen && !isFindingEditable(finding.status) && <p className="rounded-md border border-line bg-surface p-3 text-sm text-ink-muted">{labels.lockedNotice}</p>}
       {canManage && editable && <EditFinding lang={lang} labels={labels} finding={finding} />}
-      {canManage && <StatusForm lang={lang} labels={labels} finding={finding} isCreator={isCreator} />}
+      {canManage && findingsOpen && <StatusForm lang={lang} labels={labels} finding={finding} isCreator={isCreator} />}
 
       <section className="space-y-3 rounded-lg border border-line bg-surface p-5" aria-labelledby="finding-actions">
         <h2 id="finding-actions" className="text-lg font-semibold text-ink">{labels.actionsTitle}</h2>
@@ -67,12 +74,12 @@ export function FindingDetails({ lang, labels, canManage, canRemediate, isCreato
                   {a.overdue && <span className="ml-1 font-semibold text-rose-800">· {labels.overdue}</span>}
                   {a.completionEvidenceId && ` · ${labels.completionEvidence}: ${finding.evidence.find((e) => e.id === a.completionEvidenceId)?.originalName ?? "—"}`}
                 </p>
-                <ActionControls lang={lang} labels={labels} findingId={finding.id} findingStatus={finding.status} action={a} evidence={finding.evidence} canManage={canManage} canRemediate={canRemediate} />
+                <ActionControls lang={lang} labels={labels} findingId={finding.id} findingStatus={finding.status} action={a} evidence={finding.evidence} canManage={canManage && remediationOpen} canRemediate={canRemediate && remediationOpen} />
               </li>
             ))}
           </ul>
         )}
-        {canManage && canAddRemediationAction(finding.status) && <AddAction lang={lang} labels={labels} findingId={finding.id} />}
+        {canManage && remediationOpen && canAddRemediationAction(finding.status) && <AddAction lang={lang} labels={labels} findingId={finding.id} />}
       </section>
 
       <section className="space-y-2 rounded-lg border border-line bg-surface p-5" aria-labelledby="finding-history">

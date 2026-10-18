@@ -16,6 +16,8 @@ import {
   type EngagementActionState,
 } from "../actions";
 import { Feedback, formatDate } from "../engagement-list";
+import { EngagementLockNotice } from "@/components/engagement-lock-notice";
+import { engagementAllows } from "@/lib/audits/workflow";
 
 type Labels = Dictionary["auditWorkflow"];
 type Detail = {
@@ -105,6 +107,7 @@ export function EngagementDetails({
   assessmentStatuses,
   canAssess,
   currentUserId,
+  lockMessages,
 }: {
   lang: string;
   labels: Labels;
@@ -120,8 +123,14 @@ export function EngagementDetails({
   assessmentStatuses: Dictionary["dashboard"]["assessmentStatuses"];
   canAssess: boolean;
   currentUserId: string;
+  lockMessages: Record<string, string>;
 }) {
   const currentStatus = engagement.status;
+  // Mirrors the server-side operation gates; the server remains the authority.
+  const editable = engagementAllows(currentStatus, "editEngagement");
+  const canReviseNow = canAssess && engagementAllows(currentStatus, "assessControl");
+  const canApproveNow = canAssess && engagementAllows(currentStatus, "approveAssessment");
+  const showLockNotice = !editable && (canManage || canAssignAuditors || canAssess);
   const assessed = engagement.scopeItems.filter((item) =>
     item.assessments.some((assessment) => assessment.status !== "NOT_TESTED"),
   ).length;
@@ -152,9 +161,14 @@ export function EngagementDetails({
           <Info label={labels.updated}>{formatDate(engagement.updatedAt, lang)}</Info>
           <Info label={labels.scope}>{engagement.scope}</Info>
         </dl>
+        {showLockNotice && (
+          <div className="mt-6">
+            <EngagementLockNotice status={currentStatus} messages={lockMessages} />
+          </div>
+        )}
         {canManage && (
           <div className="mt-6 grid gap-5 border-t border-line pt-5 lg:grid-cols-2">
-            <EditEngagementForm engagement={engagement} lang={lang} labels={labels} />
+            {editable && <EditEngagementForm engagement={engagement} lang={lang} labels={labels} />}
             <StatusForm engagement={engagement} lang={lang} labels={labels} />
           </div>
         )}
@@ -165,10 +179,10 @@ export function EngagementDetails({
             labels={labels}
             participants={participants.map(({ user }) => user)}
             available={availableAnalysts}
-            canManage={canAssignAuditors}
+            canManage={canAssignAuditors && editable}
           />
         )}
-        {canAssignAuditors && (
+        {canAssignAuditors && editable && (
           <AssignAuditorForm
             lang={lang}
             engagementId={engagement.id}
@@ -192,7 +206,8 @@ export function EngagementDetails({
         verification={verification}
         scopeItems={assessmentData.scopeItems}
         evidence={assessmentData.evidence}
-        canAssess={canAssess}
+        canAssess={canReviseNow}
+        canApprove={canApproveNow}
         currentUserId={currentUserId}
       />
 
@@ -224,7 +239,7 @@ export function EngagementDetails({
             ))}
           </div>
         )}
-        {canManage && (
+        {canManage && editable && (
           <div className="border-t border-line pt-4">
             <h3 className="mb-3 font-medium text-ink">{labels.availableRequirements}</h3>
             {requirements.length === 0 ? (

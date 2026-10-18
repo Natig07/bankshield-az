@@ -21,6 +21,29 @@ export function bandClass(band: string) {
 
 export function Feedback({ state, labels }: { state: RiskActionState; labels: Labels }) {
   if (!state) return null;
+  if (state.error === "invalidInput" && state.fields?.length) {
+    const fieldLabels: { [field: string]: string } = {
+      title: labels.fields.title, description: labels.fields.description, category: labels.fields.category,
+      assetId: labels.fields.asset, ownerName: labels.fields.owner, treatment: labels.fields.treatment,
+      inherentLikelihood: labels.fields.inherentLikelihood, inherentImpact: labels.fields.inherentImpact,
+      residualLikelihood: labels.fields.residualLikelihood, residualImpact: labels.fields.residualImpact,
+      reviewDate: labels.fields.reviewDate,
+    };
+    return (
+      <div role="alert" className="text-sm text-rose-800">
+        <p>{labels.errors.invalidInput}</p>
+        <ul className="mt-1 list-disc pl-5">
+          {state.fields.map((issue) => (
+            <li key={`${issue.field}-${issue.code}`}>
+              {issue.code === "residualPair" || issue.code === "residualAboveInherent"
+                ? labels.fieldErrors[issue.code]
+                : `${fieldLabels[issue.field] ?? issue.field}: ${labels.fieldErrors[issue.code].replace("{n}", String(issue.limit ?? ""))}`}
+            </li>
+          ))}
+        </ul>
+      </div>
+    );
+  }
   if (state.error) return <p role="alert" className="text-sm text-rose-800">{labels.errors[state.error]}</p>;
   if (state.success) return <p role="status" className="text-sm text-emerald-800">{labels.success[state.success]}</p>;
   return null;

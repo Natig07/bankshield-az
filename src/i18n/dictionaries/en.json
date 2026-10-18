@@ -22,7 +22,13 @@
     "notAvailableYet": "Not available yet",
     "openSource": "Open source page",
     "mainNavigation": "Main navigation",
-    "skipToContent": "Skip to main content"
+    "skipToContent": "Skip to main content",
+    "engagementLock": {
+      "DRAFT": "This engagement is still a draft. Set it to In progress before reviewing evidence or raising findings.",
+      "IN_REVIEW": "This engagement is in review. Scope, assessments and uploads are frozen; return it to In progress to change them.",
+      "APPROVED": "This engagement is approved and locked. Only follow-up remediation can continue.",
+      "ARCHIVED": "This engagement is archived and read-only."
+    }
   },
   "auth": {
     "loginTitle": "Sign in",
@@ -393,7 +399,7 @@
       "duplicateControl": "A control with this code already exists.",
       "duplicateMapping": "This requirement is already mapped to the control.",
       "notFound": "The assessment or engagement is unavailable.",
-      "invalidEvidence": "The selected evidence does not belong to this engagement or control.",
+      "invalidEvidence": "The selected evidence cannot support this assessment. It must belong to this engagement (and this control, if it is control-specific) and must not be rejected or replaced.",
       "approvalRejected": "Approval requires a tested assessment, reviewer justification, and linked evidence unless the status is not applicable.",
       "invalidTransition": "Only an unapproved current assessment can be approved.",
       "concurrentRevision": "A concurrent revision was saved. Reload and try again.",
@@ -683,6 +689,13 @@
       "linked": "Control linked.",
       "unlinked": "Control unlinked.",
       "assetCreated": "Asset added."
+    },
+    "fieldErrors": {
+      "tooShort": "must be at least {n} characters",
+      "tooLong": "must be at most {n} characters",
+      "invalid": "has an invalid value",
+      "residualPair": "Provide both residual likelihood and residual impact, or leave both empty.",
+      "residualAboveInherent": "Residual risk cannot be higher than inherent risk (likelihood × impact)."
     }
   },
   "findingWorkflow": {

@@ -22,7 +22,13 @@
     "notAvailableYet": "Hələ mövcud deyil",
     "openSource": "Mənbə səhifəsini aç",
     "mainNavigation": "Əsas naviqasiya",
-    "skipToContent": "Əsas məzmuna keç"
+    "skipToContent": "Əsas məzmuna keç",
+    "engagementLock": {
+      "DRAFT": "Bu tapşırıq hələ «Qaralama» statusundadır. Sübutları nəzərdən keçirmək və ya qeydlər yaratmaq üçün onu «Davam edir» statusuna keçirin.",
+      "IN_REVIEW": "Bu tapşırıq «Baxışdadır» statusundadır. Əhatə, qiymətləndirmələr və yükləmələr dondurulub; dəyişmək üçün onu «Davam edir» statusuna qaytarın.",
+      "APPROVED": "Bu tapşırıq təsdiqlənib və kilidlənib. Yalnız sonrakı düzəliş işləri davam edə bilər.",
+      "ARCHIVED": "Bu tapşırıq arxivləşdirilib və yalnız oxumaq üçündür."
+    }
   },
   "auth": {
     "loginTitle": "Daxil ol",
@@ -393,7 +399,7 @@
       "duplicateControl": "Bu kodlu nəzarət tədbiri artıq mövcuddur.",
       "duplicateMapping": "Bu tələb artıq həmin nəzarət tədbiri ilə əlaqələndirilib.",
       "notFound": "Qiymətləndirmə və ya audit tapşırığı əlçatan deyil.",
-      "invalidEvidence": "Seçilmiş sübut bu auditə və ya nəzarət tədbirinə aid deyil.",
+      "invalidEvidence": "Seçilmiş sübut bu qiymətləndirməni əsaslandıra bilməz. O, bu tapşırığa (və nəzarətə xas olduqda həmin nəzarətə) aid olmalı, rədd edilmiş və ya əvəz olunmuş olmamalıdır.",
       "approvalRejected": "Təsdiq üçün sınaqdan keçirilmiş qiymətləndirmə, rəyçi əsaslandırması və tətbiq edilmirsə, əlaqələndirilmiş sübut tələb olunur.",
       "invalidTransition": "Yalnız təsdiqlənməmiş cari qiymətləndirmə təsdiqlənə bilər.",
       "concurrentRevision": "Eyni vaxtda versiya qeydə alınıb. Səhifəni yeniləyin.",
@@ -683,6 +689,13 @@
       "linked": "Nəzarət tədbiri əlaqələndirildi.",
       "unlinked": "Əlaqə silindi.",
       "assetCreated": "Aktiv əlavə edildi."
+    },
+    "fieldErrors": {
+      "tooShort": "ən azı {n} simvol olmalıdır",
+      "tooLong": "ən çoxu {n} simvol ola bilər",
+      "invalid": "yanlış dəyər var",
+      "residualPair": "Qalıq ehtimalı və qalıq təsiri birlikdə daxil edin və ya hər ikisini boş buraxın.",
+      "residualAboveInherent": "Qalıq risk ilkin riskdən (ehtimal × təsir) yüksək ola bilməz."
     }
   },
   "findingWorkflow": {

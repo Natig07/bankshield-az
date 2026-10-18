@@ -2,7 +2,7 @@ import "server-only";
 import { z } from "zod";
 import type { PrismaClient } from "@/generated/prisma/client";
 import { assertRolePermission, type Role } from "@/lib/auth/authorization";
-import { validateApproval, validateAssessment } from "@/lib/domain/assessment";
+import { UNUSABLE_EVIDENCE_STATES, validateApproval, validateAssessment } from "@/lib/domain/assessment";
 import { assessmentStatusSchema } from "@/lib/domain/enums";
 import { isDatabaseConstraintError } from "@/lib/auth/service";
 import { assertEngagementOperation } from "@/lib/audits/service";
@@ -22,7 +22,6 @@ const mappingSchema = z.object({
 });
 
 // Evidence in these review states can no longer support an assessment.
-const UNUSABLE_EVIDENCE_STATES = ["REJECTED", "SUPERSEDED"];
 
 const assessmentRevisionSchema = z.object({
   // The revision number the author was looking at (0 when nothing was recorded yet).

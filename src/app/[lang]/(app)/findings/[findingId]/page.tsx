@@ -29,6 +29,7 @@ export default async function FindingPage({ params }: PageProps<"/[lang]/finding
       labels={dict.findingWorkflow}
       canManage={hasPermission(user.role, "findings:manage")}
       canRemediate={hasPermission(user.role, "findings:remediate")}
+      lockMessages={dict.common.engagementLock}
       isCreator={finding.createdById === user.id}
       finding={{
         ...finding,

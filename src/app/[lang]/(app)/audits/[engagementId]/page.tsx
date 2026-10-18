@@ -90,6 +90,7 @@ export default async function EngagementPage({
       assessmentStatuses={dict.dashboard.assessmentStatuses}
       canAssess={hasPermission(user.role, "controls:assess")}
       currentUserId={user.id}
+      lockMessages={dict.common.engagementLock}
     />
   );
 }
