@@ -252,6 +252,8 @@
     },
     "detailsTitle": "Tapşırıq məlumatları",
     "saveStatus": "Statusu yenilə",
+    "approvalBlockedNoAssessment": "Təsdiq mümkün deyil: bu yoxlamada hələ heç bir qiymətləndirmə təsdiqlənməyib.",
+    "approvalBlockedPreparer": "Təsdiq mümkün deyil: bu yoxlamanı siz hazırlamısınız, təsdiqi başqa səlahiyyətli istifadəçi etməlidir.",
     "updatingStatus": "Status yenilənir…",
     "requirementsTitle": "Seçilmiş normativ tələblər",
     "availableRequirements": "Mövcud tələblər",
@@ -299,7 +301,9 @@
       "unverifiedDecision": "Yoxlanılmamış tələbi daxil etmək üçün açıq təsdiq və qərar qeydi tələb olunur.",
       "generic": "Əməliyyatı tamamlamaq mümkün olmadı. Yenidən cəhd edin və ya sistem inzibatçısına müraciət edin.",
       "locked": "Yoxlamanın statusu bu dəyişikliyə icazə vermir.",
-      "invalidParticipant": "Hələ iştirakçı olmayan aktiv təhlükəsizlik analitiki seçin."
+      "invalidParticipant": "Hələ iştirakçı olmayan aktiv təhlükəsizlik analitiki seçin.",
+      "approvedAssessmentRequired": "Təsdiq üçün bu yoxlamada ən azı bir təsdiqlənmiş qiymətləndirmə olmalıdır. Əvvəlcə qiymətləndirməni təsdiqləyin.",
+      "independentApproverRequired": "Yoxlamanı hazırlayan şəxs onu təsdiq edə bilməz. Başqa səlahiyyətli istifadəçidən təsdiq etməyi xahiş edin."
     },
     "success": {
       "saved": "Tapşırıq məlumatları yadda saxlanıldı.",

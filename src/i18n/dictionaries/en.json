@@ -252,6 +252,8 @@
     },
     "detailsTitle": "Engagement details",
     "saveStatus": "Update status",
+    "approvalBlockedNoAssessment": "Approval is unavailable: no assessment in this engagement has been approved yet.",
+    "approvalBlockedPreparer": "Approval is unavailable: you prepared this engagement, so a different authorized user must approve it.",
     "updatingStatus": "Updating status…",
     "requirementsTitle": "Selected regulatory requirements",
     "availableRequirements": "Available requirements",
@@ -299,7 +301,9 @@
       "unverifiedDecision": "Explicit acknowledgement and a decision note are required to include an unverified requirement.",
       "generic": "The operation could not be completed. Try again or contact your system administrator.",
       "locked": "The engagement status does not allow this change.",
-      "invalidParticipant": "Select an active security analyst who is not already a participant."
+      "invalidParticipant": "Select an active security analyst who is not already a participant.",
+      "approvedAssessmentRequired": "Approval needs at least one approved assessment in this engagement. Approve an assessment first.",
+      "independentApproverRequired": "The person who prepared this engagement cannot approve it. Ask a different authorized user to approve."
     },
     "success": {
       "saved": "Engagement details saved.",

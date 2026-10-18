@@ -113,6 +113,27 @@ async function createRequirement(verificationStatus = "PENDING_VERIFICATION") {
   return requirement;
 }
 
+// Approval preconditions: an approved current assessment in this engagement and an approver
+// other than the preparer.
+async function addApprovedAssessment(engagementId: string) {
+  const requirement = await createRequirement("VERIFIED");
+  const mapping = await prisma.requirementControlMapping.findFirstOrThrow({ where: { requirementId: requirement.id } });
+  const scopeItem = await prisma.auditScopeItem.create({
+    data: { engagementId, requirementId: requirement.id, controlId: mapping.controlId },
+  });
+  await prisma.controlAssessment.create({
+    data: {
+      scopeItemId: scopeItem.id,
+      version: 1,
+      status: "COMPLIANT",
+      justification: "Reviewed test evidence.",
+      assessedById: auditorId,
+      approvedById: administratorId,
+      approvedAt: new Date(),
+    },
+  });
+}
+
 test("engagement creation validates fields and records the assigned auditor and audit event", async () => {
   assert.equal(engagementInputSchema.safeParse({
     ...validInput(auditorId),
@@ -163,16 +184,17 @@ test("metadata updates preserve assignment and status changes follow the support
   );
   await transitionEngagement(prisma, auditorId, created.id, "IN_PROGRESS");
   await transitionEngagement(prisma, auditorId, created.id, "IN_REVIEW");
-  await transitionEngagement(prisma, auditorId, created.id, "APPROVED");
+  await addApprovedAssessment(created.id);
+  await transitionEngagement(prisma, secondAuditorId, created.id, "APPROVED");
   const approved = await prisma.auditEngagement.findUniqueOrThrow({ where: { id: created.id } });
   assert.equal(approved.status, "APPROVED");
   assert.ok(approved.approvedAt);
-  assert.equal(approved.approvedById, auditorId);
+  assert.equal(approved.approvedById, secondAuditorId);
   const approvedAt = approved.approvedAt;
   await transitionEngagement(prisma, auditorId, created.id, "ARCHIVED");
   const archived = await prisma.auditEngagement.findUniqueOrThrow({ where: { id: created.id } });
   assert.equal(archived.status, "ARCHIVED");
-  assert.equal(archived.approvedById, auditorId);
+  assert.equal(archived.approvedById, secondAuditorId);
   assert.equal(archived.approvedAt?.toISOString(), approvedAt.toISOString());
   assert.equal(await prisma.auditEvent.count({ where: { entityId: created.id } }), 6);
 });
@@ -270,7 +292,8 @@ test("approved, archived and in-review engagements lock scope, metadata and assi
   await transitionEngagement(prisma, auditorId, created.id, "IN_PROGRESS");
   await transitionEngagement(prisma, auditorId, created.id, "IN_REVIEW");
   await attempt();
-  await transitionEngagement(prisma, auditorId, created.id, "APPROVED");
+  await addApprovedAssessment(created.id);
+  await transitionEngagement(prisma, secondAuditorId, created.id, "APPROVED");
   await attempt();
   await transitionEngagement(prisma, auditorId, created.id, "ARCHIVED");
   await attempt();

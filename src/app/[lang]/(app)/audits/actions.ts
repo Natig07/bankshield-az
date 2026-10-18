@@ -6,6 +6,8 @@ import { hasLocale } from "@/i18n/config";
 import { requireEngagementPermission, requirePermission } from "@/lib/auth/dal";
 import { getPrisma } from "@/lib/db";
 import {
+  ApprovedAssessmentRequiredError,
+  IndependentApproverRequiredError,
   addEngagementParticipant,
   assignEngagementAuditor,
   createEngagement,
@@ -27,7 +29,7 @@ import { ENGAGEMENT_STATUSES } from "@/lib/audits/workflow";
 
 export type EngagementActionState =
   | {
-      error?: "invalidInput" | "invalidAuditor" | "notFound" | "duplicate" | "invalidTransition" | "unverifiedDecision" | "locked" | "invalidParticipant";
+      error?: "invalidInput" | "invalidAuditor" | "notFound" | "duplicate" | "invalidTransition" | "unverifiedDecision" | "locked" | "invalidParticipant" | "approvedAssessmentRequired" | "independentApproverRequired";
       success?: "saved" | "statusUpdated" | "requirementSelected" | "auditorAssigned" | "participantAdded" | "participantRemoved";
       engagementId?: string;
     }
@@ -61,6 +63,8 @@ function knownError(error: unknown): NonNullable<EngagementActionState>["error"]
   if (error instanceof UnverifiedRequirementDecisionError) return "unverifiedDecision";
   if (error instanceof EngagementLockedError) return "locked";
   if (error instanceof InvalidParticipantError) return "invalidParticipant";
+  if (error instanceof ApprovedAssessmentRequiredError) return "approvedAssessmentRequired";
+  if (error instanceof IndependentApproverRequiredError) return "independentApproverRequired";
   return undefined;
 }
 

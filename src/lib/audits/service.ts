@@ -69,6 +69,20 @@ export class InvalidEngagementTransitionError extends Error {
   }
 }
 
+export class ApprovedAssessmentRequiredError extends Error {
+  constructor() {
+    super("An engagement needs at least one approved assessment before it can be approved.");
+    this.name = "ApprovedAssessmentRequiredError";
+  }
+}
+
+export class IndependentApproverRequiredError extends Error {
+  constructor() {
+    super("The engagement preparer cannot approve their own engagement.");
+    this.name = "IndependentApproverRequiredError";
+  }
+}
+
 export class EngagementRecordNotFoundError extends Error {
   constructor() {
     super("The engagement or selected record no longer exists.");
@@ -227,42 +241,77 @@ export async function updateEngagement(
   });
 }
 
-export async function transitionEngagement(
-  db: PrismaClient,
-  actorId: string,
-  engagementId: string,
-  targetStatus: string,
-) {
-  return db.$transaction(async (tx) => {
-    const current = await tx.auditEngagement.findUnique({
-      where: { id: engagementId },
-      select: { status: true },
+// An assessment counts as formally approved when it is the current revision of a scope item that
+// belongs to this engagement and carries both approval markers (approveAssessment sets them together).
+const APPROVED_CURRENT_ASSESSMENT = {
+  isCurrent: true,
+  approvedAt: { not: null },
+  approvedById: { not: null },
+} as const;
+
+export async function transitionEngagement(db: PrismaClient, actorId: string, engagementId: string, targetStatus: string) {
+  try {
+    return await db.$transaction(async (tx) => {
+      const current = await tx.auditEngagement.findUnique({
+        where: { id: engagementId },
+        select: { status: true, createdById: true },
+      });
+      if (!current) throw new EngagementRecordNotFoundError();
+      if (!canTransitionEngagementStatus(current.status, targetStatus)) throw new InvalidEngagementTransitionError();
+      const approved = targetStatus === "APPROVED";
+      if (approved && current.createdById === actorId) throw new IndependentApproverRequiredError();
+      // The preconditions are part of the compare-and-set itself, so a concurrent change (for
+      // example a revised assessment) cannot slip between the check and the update.
+      const changed = await tx.auditEngagement.updateMany({
+        where: {
+          id: engagementId,
+          status: current.status,
+          ...(approved
+            ? {
+                createdById: { not: actorId },
+                scopeItems: { some: { assessments: { some: APPROVED_CURRENT_ASSESSMENT } } },
+              }
+            : {}),
+        },
+        data: { status: targetStatus, ...(approved ? { approvedById: actorId, approvedAt: new Date() } : {}) },
+      });
+      if (changed.count !== 1) {
+        if (approved) {
+          const latest = await tx.auditEngagement.findUnique({
+            where: { id: engagementId },
+            select: { status: true, createdById: true },
+          });
+          if (latest && latest.status === current.status) {
+            if (latest.createdById === actorId) throw new IndependentApproverRequiredError();
+            throw new ApprovedAssessmentRequiredError();
+          }
+        }
+        throw new InvalidEngagementTransitionError();
+      }
+      await tx.auditEvent.create({
+        data: auditEvent(actorId, "AUDIT_ENGAGEMENT_STATUS_CHANGED", "AuditEngagement", engagementId, `${current.status} -> ${targetStatus}`),
+      });
     });
-    if (!current) throw new EngagementRecordNotFoundError();
-    if (!canTransitionEngagementStatus(current.status, targetStatus)) {
-      throw new InvalidEngagementTransitionError();
+  } catch (error) {
+    if (error instanceof ApprovedAssessmentRequiredError || error instanceof IndependentApproverRequiredError) {
+      // Recorded outside the rolled-back transaction so the refused attempt stays in the audit trail.
+      await db.auditEvent
+        .create({
+          data: {
+            ...auditEvent(
+              actorId,
+              "AUDIT_ENGAGEMENT_APPROVAL_REFUSED",
+              "AuditEngagement",
+              engagementId,
+              error instanceof IndependentApproverRequiredError ? "preparer cannot approve" : "no approved assessment",
+            ),
+            outcome: "FAILURE",
+          },
+        })
+        .catch(() => undefined);
     }
-    const approved = targetStatus === "APPROVED";
-    // Compare-and-set on the status that was validated above, so two concurrent
-    // transitions cannot both succeed from the same starting state.
-    const changed = await tx.auditEngagement.updateMany({
-      where: { id: engagementId, status: current.status },
-      data: {
-        status: targetStatus,
-        ...(approved ? { approvedById: actorId, approvedAt: new Date() } : {}),
-      },
-    });
-    if (changed.count !== 1) throw new InvalidEngagementTransitionError();
-    await tx.auditEvent.create({
-      data: auditEvent(
-        actorId,
-        "AUDIT_ENGAGEMENT_STATUS_CHANGED",
-        "AuditEngagement",
-        engagementId,
-        `${current.status} -> ${targetStatus}`,
-      ),
-    });
-  });
+    throw error;
+  }
 }
 
 export async function assignEngagementAuditor(

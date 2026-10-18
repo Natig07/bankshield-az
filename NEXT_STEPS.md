@@ -81,3 +81,5 @@ Resume point for a fresh session. Implemented: authentication, Regulatory Librar
 ## 5. Before further changes
 
 Run `npm run typecheck`, `npx eslint`, `npm test`, and `npm run build`. Update PROGRESS.md with actual results. Do not implement AI analysis, evidence uploads, regulatory scraping, or additional modules until explicitly scoped.
+
+- Manually verify engagement approval in a browser: as the preparer, the Approved option must be hidden with an explanation; with no approved assessment it must be hidden; a different Auditor/Administrator can approve once an assessment is approved. Not browser-tested yet.

@@ -130,6 +130,10 @@ export function EngagementDetails({
   const editable = engagementAllows(currentStatus, "editEngagement");
   const canReviseNow = canAssess && engagementAllows(currentStatus, "assessControl");
   const canApproveNow = canAssess && engagementAllows(currentStatus, "approveAssessment");
+  const hasApprovedAssessment = assessmentData.scopeItems.some((item) =>
+    item.assessments.some((assessment) => assessment.isCurrent && assessment.approvedAt),
+  );
+  const isPreparer = engagement.createdById === currentUserId;
   const showLockNotice = !editable && (canManage || canAssignAuditors || canAssess);
   const assessed = engagement.scopeItems.filter((item) =>
     item.assessments.some((assessment) => assessment.status !== "NOT_TESTED"),
@@ -169,7 +173,7 @@ export function EngagementDetails({
         {canManage && (
           <div className="mt-6 grid gap-5 border-t border-line pt-5 lg:grid-cols-2">
             {editable && <EditEngagementForm engagement={engagement} lang={lang} labels={labels} />}
-            <StatusForm engagement={engagement} lang={lang} labels={labels} />
+            <StatusForm engagement={engagement} lang={lang} labels={labels} hasApprovedAssessment={hasApprovedAssessment} isPreparer={isPreparer} />
           </div>
         )}
         {(canAssignAuditors || participants.length > 0) && (
@@ -309,21 +313,48 @@ function EditEngagementForm({ engagement, lang, labels }: { engagement: Detail; 
   );
 }
 
-function StatusForm({ engagement, lang, labels }: { engagement: Detail; lang: string; labels: Labels }) {
+function StatusForm({
+  engagement,
+  lang,
+  labels,
+  hasApprovedAssessment,
+  isPreparer,
+}: {
+  engagement: Detail;
+  lang: string;
+  labels: Labels;
+  hasApprovedAssessment: boolean;
+  isPreparer: boolean;
+}) {
   const [state, action, pending] = useActionState<EngagementActionState, FormData>(transitionEngagementAction, null);
-  const transitions = ENGAGEMENT_STATUSES.filter((target) => canTransitionEngagementStatus(engagement.status, target));
-  if (transitions.length === 0) return null;
+  // UI hint only: the server re-checks both approval preconditions from database state.
+  const approvalBlockers = [
+    ...(hasApprovedAssessment ? [] : [labels.approvalBlockedNoAssessment]),
+    ...(isPreparer ? [labels.approvalBlockedPreparer] : []),
+  ];
+  const transitions = ENGAGEMENT_STATUSES.filter(
+    (target) =>
+      canTransitionEngagementStatus(engagement.status, target) && (target !== "APPROVED" || approvalBlockers.length === 0),
+  );
+  const approvalPossibleByState = canTransitionEngagementStatus(engagement.status, "APPROVED");
+  if (transitions.length === 0 && !(approvalPossibleByState && approvalBlockers.length > 0)) return null;
   return (
     <form action={action} className="self-start">
       <input type="hidden" name="lang" value={lang} />
       <input type="hidden" name="engagementId" value={engagement.id} />
+      {transitions.length === 0 ? null : (<>
       <label htmlFor="engagement-target-status" className="mb-1 block text-sm font-medium text-ink">{labels.status}</label>
       <div className="flex flex-wrap gap-2">
         <select id="engagement-target-status" name="targetStatus" className="rounded-md border border-line bg-surface px-3 py-2 text-sm text-ink">
           {transitions.map((status) => <option key={status} value={status}>{labels.statusLabels[status]}</option>)}
         </select>
         <button type="submit" disabled={pending} className="rounded-md border border-line px-3 py-2 text-sm font-medium text-ink disabled:opacity-60">{pending ? labels.updatingStatus : labels.saveStatus}</button>
-      </div>
+      </div></>)}
+      {approvalPossibleByState && approvalBlockers.length > 0 && (
+        <ul className="mt-2 list-disc pl-5 text-sm text-amber-900" data-testid="approval-blockers">
+          {approvalBlockers.map((message) => <li key={message}>{message}</li>)}
+        </ul>
+      )}
       <div className="mt-2"><Feedback state={state} labels={labels} /></div>
     </form>
   );
