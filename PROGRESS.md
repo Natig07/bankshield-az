@@ -236,3 +236,9 @@ See NEXT_STEPS.md: validate and migrate the Prisma schema on a machine where the
 
 ## Step 1: Planning and first scaffold (2026-10-14)
 - Inspected the empty environment, retrieved the three regulatory sources through an automated summarizer, wrote the original planning files for a .NET/Angular design. That design is superseded by the Next.js-only decision above. The regulatory findings carry over unchanged.
+
+## AI Review (Gemini)
+
+- Replaced the AI Review placeholder with a working, engagement-level analysis page using the official `@google/genai` SDK. Additive migration `20261019000000_ai_review` adds `AiReviewRun` and `AiReviewSuggestion`; the older `AIAnalysisRun`/`AISuggestion` tables are untouched and unused.
+- Suggestions are saved `PENDING_REVIEW`; accept/reject (compare-and-set, audit events) records a human decision only. Minimal-data payload with opaque refs, untrusted-data prompt framing, JSON-schema constraint plus Zod validation, graceful handling of missing configuration, API errors, timeouts and invalid output. AZ/EN strings added under `aiReviewWorkflow`.
+- Tested with a fake model client (unit/integration) and in a real browser against a local stub that mimics the Gemini HTTP endpoint. **Not tested against live Gemini.**

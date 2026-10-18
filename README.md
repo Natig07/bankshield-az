@@ -118,6 +118,19 @@ Assessment approval requires an approver different from the assessor. Assessment
 
 The additive migration `20261015124511_audit_engagement_workflow` adds the audited-organisation column and the unique requirement-selection record. Existing engagement rows are preserved; older rows receive an empty organisation value until an authorised user updates their metadata. Do not reset or recreate the database to apply it.
 
+## AI Review (Gemini)
+
+The AI Review page analyses an engagement's scope items, findings and linked risks against the regulatory requirements in scope and stores the results as **pending hypotheses** that an auditor accepts or rejects. Accepting records a decision only; it never changes findings, risks, assessments or severities.
+
+It is disabled until a key is configured. Add these to your own `.env` (never commit it) and restart the app:
+
+```
+GEMINI_API_KEY="your-key-from-Google-AI-Studio"
+GEMINI_MODEL="gemini-3.8-flash"   # optional
+```
+
+Selected records are sent to Google's Gemini API (requirement and control text, assessment status, evidence metadata only, findings, remediation plans, linked risks). Evidence file contents, user names and emails, passwords and secrets are not sent. Review your organisation's data-protection and outsourcing rules before enabling it with real bank data.
+
 ## Evidence
 
 Analysts upload evidence to an engagement that is in Draft or In progress (PDF, Office documents, images, text or CSV; maximum 10 MB; the real file signature must match the extension). Files are stored under `EVIDENCE_STORAGE_DIR` (default `storage-local/`, gitignored) with server-generated opaque names; the original filename is display-only. Auditors review evidence, and the reviewer must differ from the uploader. Download goes through `/api/evidence/[evidenceId]`, which checks the session and engagement access and sends the file as an attachment with `nosniff`. There is no malware scanning; treat uploaded files as untrusted and back up the storage folder together with the database.

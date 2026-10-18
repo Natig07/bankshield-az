@@ -152,14 +152,17 @@ erDiagram
 3. Re-create migrations for the new provider rather than reusing SQLite migrations.
 4. Re-run the test suite and the access-control tests against the new database.
 
-## AI-assisted review (Phase 5 design)
+## AI-assisted review (Gemini, engagement level)
 
-- Server-side interface `ComplianceDocumentAnalyzer.analyze({ documentText, requirements })`. First implementation is a **mock analyzer**, clearly labeled simulated (`AIAnalysisRun.isSimulated`). Later an optional local model through a configurable local endpoint.
-- Output is validated with a Zod schema. Every quotation is checked as an exact substring of the stored extraction for the cited evidence document (and page when given); failures are rejected and logged, never saved as valid.
-- Suggestions are created `PENDING_REVIEW`. No code path lets an analyzer approve an assessment, close a finding, or change a compliance status.
-- Document text is untrusted data. The analyzer receives only the text and the requirements it is given, with no database or tool access.
-- Insufficient evidence returns `INSUFFICIENT_EVIDENCE`. "Not found in this document" is never recorded as non-compliance.
-- AI confidence, finding severity and assessment status are three separate fields and are never combined.
+Implemented in `src/lib/ai-review/` with the page at `src/app/[lang]/(app)/ai-review/`.
+
+- **Provider seam:** `AiReviewModelClient.generate()` (`gemini.ts`) wraps the official `@google/genai` SDK. Services receive the client as a dependency, so automated tests use a fake and never call Google. Configuration comes from `GEMINI_API_KEY`, `GEMINI_MODEL` (default `gemini-3.8-flash`) and optional `GEMINI_TIMEOUT_MS`, read on the server only.
+- **Minimal data:** `input.ts` builds the payload from the engagement's scope items (requirement text, control text, current assessment status/justification, evidence *metadata counts only*), findings with remediation status, and risks linked to the scoped controls. Records are addressed by opaque refs (`S1`, `F2`, `R3`); database ids, user names/emails, owner names, evidence file names and contents, the engagement title and organisation are never sent. Text is length-bounded and control characters are stripped.
+- **Prompt-injection posture:** instructions exist only in the system instruction; all records go in one `<untrusted_records>` JSON block with `<`/`>` escaped so content cannot close the block. The model is told the block is data. Output is constrained by a JSON schema and then re-validated with Zod; suggestions citing refs that were not sent are discarded, and an answer with nothing valid is rejected. This reduces, but cannot eliminate, the risk of manipulated model output, which is why nothing is applied automatically.
+- **Persistence:** `AiReviewRun` (model, prompt version, status, failure code, input counts) and `AiReviewSuggestion` (`PENDING_REVIEW` / `ACCEPTED` / `REJECTED`, target type and id, hypothesis text, JSON action and verification lists, AI confidence, limitations, reviewer, note). Provider error messages are never stored. These are separate from the older evidence-text tables `AIAnalysisRun` / `AISuggestion`, which remain unused.
+- **Authority:** running an analysis needs `audit:manage` plus read access to regulatory, controls, findings and risks (data leaves the system), and engagement access. Reviewing needs `audit:manage` and engagement access and uses a compare-and-set so one reviewer wins. Accept/reject only records the human decision and an audit event (`AI_REVIEW_RUN`, `AI_SUGGESTION_ACCEPTED`, `AI_SUGGESTION_REJECTED`); no finding, risk, assessment, severity, status or approval is created or changed by AI code. Runs are rate-limited to one per engagement per 15 seconds.
+- AI confidence, finding severity and assessment status stay three separate concepts. "No evidence found" is never recorded as non-compliance.
+- Not implemented: analysis of evidence file contents or promotion of an accepted suggestion into a finding.
 
 ## Scoring rules
 

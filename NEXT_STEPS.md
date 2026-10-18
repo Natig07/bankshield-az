@@ -26,7 +26,7 @@ Resume point for a fresh session. Implemented: authentication, Regulatory Librar
 - Findings can be linked to a requirement only when editing (the create form does not list scope requirements). `ownerUserId` on remediation actions has no UI, so the "owner cannot verify" rule applies only when it is set by other means.
 - `...ById` columns (for example risk `createdById`) are soft references without foreign keys.
 - Azerbaijani case-insensitive search is limited by SQLite; the Azerbaijani dictionary needs native review.
-- Reporting and AI-assisted review remain unimplemented. Do not start them until scoped. The Reports and AI Review pages are placeholders.
+- Reporting remains unimplemented (the Reports page is a placeholder). AI Review is implemented with Gemini (`src/lib/ai-review/`); it has been tested with a mocked model and a local stub server only. Test it live with your own key (README, "AI Review (Gemini)") before relying on it, and review the data-protection implications of sending engagement data to Google.
 - Continue the verification checklist in REGULATORY_SOURCES.md; no regulatory item is verified without a named reviewer.
 
 ## Historical notes (still accurate)
