@@ -12,6 +12,7 @@ import {
   type FindingActionState,
 } from "../actions";
 import { Feedback, FindingFields, input, primary, secondary, severityClass, type Labels } from "../finding-fields";
+import { formatDate } from "@/lib/format/date";
 
 type Finding = {
   id: string; title: string; description: string; severity: string; status: string; requirementId: string | null;
@@ -25,7 +26,7 @@ type Finding = {
   history: { id: string; changeNote: string | null; createdAt: string }[];
 };
 
-const fmt = (value: string, lang: string) => new Intl.DateTimeFormat(lang, { dateStyle: "medium", timeZone: "UTC" }).format(new Date(value));
+const fmt = formatDate;
 
 export function FindingDetails({ lang, labels, canManage, canRemediate, isCreator, finding }: {
   lang: string; labels: Labels; canManage: boolean; canRemediate: boolean; isCreator: boolean; finding: Finding;

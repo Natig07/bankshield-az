@@ -9,6 +9,7 @@ import {
   uploadEvidenceAction,
   type EvidenceActionState,
 } from "./actions";
+import { formatDate } from "@/lib/format/date";
 
 type Labels = Dictionary["evidenceWorkflow"];
 type Record = {
@@ -237,6 +238,3 @@ function formatSize(bytes: number) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-function formatDate(value: string, lang: string) {
-  return new Intl.DateTimeFormat(lang === "az" ? "az-AZ" : "en-GB", { dateStyle: "medium", timeZone: "UTC" }).format(new Date(value));
-}

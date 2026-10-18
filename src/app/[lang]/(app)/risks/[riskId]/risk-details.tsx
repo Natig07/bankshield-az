@@ -14,6 +14,7 @@ import {
   type RiskActionState,
 } from "../actions";
 import { bandClass, Feedback, RiskFields, type AssetOption, type Labels } from "../risk-fields";
+import { formatDate } from "@/lib/format/date";
 
 type Risk = {
   id: string;
@@ -51,9 +52,7 @@ const field = "mt-1 w-full rounded-md border border-line bg-surface px-3 py-2 fo
 const primary = "rounded-md bg-navy-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-60";
 const secondary = "rounded-md border border-line px-3 py-1.5 text-sm font-medium text-ink disabled:opacity-60";
 
-function fmt(value: string, lang: string) {
-  return new Intl.DateTimeFormat(lang, { dateStyle: "medium", timeZone: "UTC" }).format(new Date(value));
-}
+const fmt = formatDate;
 
 export function RiskDetails({
   lang,

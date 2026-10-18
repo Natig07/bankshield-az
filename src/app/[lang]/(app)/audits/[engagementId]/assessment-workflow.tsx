@@ -8,6 +8,7 @@ import {
   createAssessmentRevisionAction,
   type ControlActionState,
 } from "../../controls/actions";
+import { formatDate } from "@/lib/format/date";
 
 type Labels = Dictionary["assessmentWorkflow"];
 type Evidence = {
@@ -256,6 +257,3 @@ function Feedback({ state, labels }: { state: ControlActionState; labels: Labels
   return null;
 }
 
-function formatDate(value: string, lang: string) {
-  return new Intl.DateTimeFormat(lang, { dateStyle: "medium", timeZone: "UTC" }).format(new Date(value));
-}

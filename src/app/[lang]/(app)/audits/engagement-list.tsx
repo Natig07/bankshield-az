@@ -7,6 +7,7 @@ import type { EngagementActionState } from "./actions";
 import { createEngagementAction } from "./actions";
 import type { EngagementFilters } from "@/lib/audits/data";
 import { ENGAGEMENT_STATUSES } from "@/lib/audits/workflow";
+import { formatDate } from "@/lib/format/date";
 
 type Labels = Dictionary["auditWorkflow"];
 type EngagementRow = Awaited<ReturnType<typeof import("@/lib/audits/data").getEngagementList>>[number];
@@ -190,6 +191,4 @@ export function Feedback({ state, labels }: { state: EngagementActionState; labe
   return null;
 }
 
-export function formatDate(date: Date, lang: string): string {
-  return new Intl.DateTimeFormat(lang === "az" ? "az-AZ" : "en-GB", { dateStyle: "medium", timeZone: "UTC" }).format(date);
-}
+export { formatDate };
