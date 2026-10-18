@@ -49,7 +49,14 @@ export function createGeminiClient(apiKey: string): AiReviewModelClient {
         return text;
       } catch (error) {
         if (error instanceof ModelCallError) throw error;
-        throw new ModelCallError(classify(error, controller.signal.aborted));
+        const code = classify(error, controller.signal.aborted);
+        // Diagnostics only: error class and HTTP status, never the message, request or key.
+        console.error("Gemini request failed.", {
+          code,
+          errorName: error instanceof Error ? error.name : "UnknownError",
+          status: typeof error === "object" && error !== null && "status" in error ? (error as { status: unknown }).status : undefined,
+        });
+        throw new ModelCallError(code);
       } finally {
         clearTimeout(timer);
       }
