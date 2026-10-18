@@ -1,6 +1,35 @@
 # NEXT_STEPS.md
 
-Resume point for a fresh session. Authentication, the Regulatory Library, Audit Engagements, the searchable Security Controls catalogue, requirement mappings, and revisioned control assessments are implemented. The local SQLite schema is up to date. The authenticated UI still needs operator verification in a browser.
+Resume point for a fresh session. Implemented: authentication, Regulatory Library, Audit Engagements (with status locks and participants), Security Controls and revisioned, independently approved assessments, evidence upload/review/download, Risk Register, and Findings and Remediation. All of it is tested only against isolated SQLite databases; **nothing has been verified in a browser or end-to-end**.
+
+## First, on the operator's machine
+
+1. Back up `data/dev.db` (copy the file).
+2. `npm install` (or `npm ci`), `npx prisma generate`, `npx prisma validate`.
+3. `npm run db:inspect` (read-only: table counts and migration state) and `npx prisma migrate status`. The Risk Register migration `20261016100000_risk_register` is expected to be pending.
+4. `npx prisma migrate deploy` applies it (additive; creates five new tables and indexes only). Never run `migrate reset`/`db push --force-reset`, and do not rerun `npm run auth:bootstrap`.
+5. `npm run typecheck`, `npm run lint`, `npm test`, `npm run build`.
+6. Update Node to the latest 22.x (>= 22.13.0) to remove the `eslint-visitor-keys` `EBADENGINE` warning. `npm audit fix` (without `--force`) may update the lockfile for the Prisma-chain advisories; review the diff and re-run step 5.
+
+## Manual browser verification still required
+
+- Sign in as Administrator; add a Security Analyst as engagement participant; in IN_PROGRESS, upload a small PDF as the analyst, review it as a different auditor (reviewer must differ from uploader), download it, and try as an out-of-scope user (must be denied).
+- Record an assessment as the analyst and confirm the same user cannot approve it; approve as the auditor.
+- Risk Register: create an asset and a risk, link a control, add a treatment action, move OPEN → IN_TREATMENT → CLOSED, and try ACCEPTED as Administrator (needs justification, residual scores, future review date).
+- Findings: as an auditor create a finding in an IN_PROGRESS engagement, add an action, move to remediation, complete the action as the analyst, move to ready for review, verify as an auditor and confirm the creator is refused when closing while a second auditor can close.
+- Check pages at phone width, keyboard-only navigation (skip link, forms), and both `/az` and `/en`.
+
+## Remaining work and known limitations
+
+- No malware scanning of uploaded evidence; storage is local disk (`storage-local/`, gitignored). Back it up together with the database.
+- No MFA, password reset, or per-IP login throttle (account lockout only). CSP has no `script-src`/`style-src` yet: adding them needs per-request nonces in `proxy.ts` and browser testing.
+- Findings can be linked to a requirement only when editing (the create form does not list scope requirements). `ownerUserId` on remediation actions has no UI, so the "owner cannot verify" rule applies only when it is set by other means.
+- `...ById` columns (for example risk `createdById`) are soft references without foreign keys.
+- Azerbaijani case-insensitive search is limited by SQLite; the Azerbaijani dictionary needs native review.
+- Reporting and AI-assisted review remain unimplemented. Do not start them until scoped. The Reports and AI Review pages are placeholders.
+- Continue the verification checklist in REGULATORY_SOURCES.md; no regulatory item is verified without a named reviewer.
+
+## Historical notes (still accurate)
 
 ## Current milestone: Security Controls and Assessment Workflow
 
@@ -44,11 +73,13 @@ Resume point for a fresh session. Authentication, the Regulatory Library, Audit 
 
 - No MFA, password reset/recovery, or built-in per-IP/distributed login throttle. Apply trusted proxy/firewall limits if exposed beyond the private on-prem network.
 - Custom authentication code has not received an independent production security review. Verify reverse-proxy forwarding headers and production HTTPS/cookie behavior before deployment.
-- `npm audit --omit=dev` reported four high advisories in Prisma's `deepmerge-ts` / `mysql2` dependency chain. A breaking Prisma downgrade was not applied; review on a safe, compatible Prisma update.
-- The current assessment rules do not require an independent approver; an authorized assessor can approve their own assessment. Decide whether maker-checker separation is required before operational use.
-- Evidence uploads/private storage/authorized download and evidence review, findings/remediation, reporting, and AI workflows remain incomplete. Assessment links reference database metadata only; they do not open, serve, or verify evidence files. Operator verification of the Regulatory Library, Audit Engagements, control catalogue, and assessment workflow through authenticated sessions is still outstanding.
+- `npm audit` advisories are analysed in PROGRESS.md; none is reachable from the running app and no breaking downgrade was applied.
+- Assessment approval now requires an approver different from the assessor.
+- Reporting and AI workflows remain incomplete. Operator verification of the Regulatory Library, Audit Engagements, control catalogue, and assessment workflow through authenticated sessions is still outstanding.
 - Continue the verification checklist in REGULATORY_SOURCES.md; no regulatory item is verified without a named reviewer. Have a native speaker review the Azerbaijani dictionary.
 
 ## 5. Before further changes
 
 Run `npm run typecheck`, `npx eslint`, `npm test`, and `npm run build`. Update PROGRESS.md with actual results. Do not implement AI analysis, evidence uploads, regulatory scraping, or additional modules until explicitly scoped.
+
+- Manually verify engagement approval in a browser: as the preparer, the Approved option must be hidden with an explanation; with no approved assessment it must be hidden; a different Auditor/Administrator can approve once an assessment is approved. Not browser-tested yet.

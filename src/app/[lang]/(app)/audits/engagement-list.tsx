@@ -7,6 +7,7 @@ import type { EngagementActionState } from "./actions";
 import { createEngagementAction } from "./actions";
 import type { EngagementFilters } from "@/lib/audits/data";
 import { ENGAGEMENT_STATUSES } from "@/lib/audits/workflow";
+import { formatDate } from "@/lib/format/date";
 
 type Labels = Dictionary["auditWorkflow"];
 type EngagementRow = Awaited<ReturnType<typeof import("@/lib/audits/data").getEngagementList>>[number];
@@ -94,7 +95,7 @@ export function EngagementList({
                 </div>
                 <div>
                   <dt className="text-xs text-ink-muted">{labels.assignedAuditor}</dt>
-                  <dd className="mt-1 text-ink">{row.members.length ? row.members.map(({ user }) => user.name).join(", ") : "—"}</dd>
+                  <dd className="mt-1 text-ink">{row.members.filter(({ user }) => user.role === "AUDITOR").map(({ user }) => user.name).join(", ") || "—"}</dd>
                 </div>
                 <div>
                   <dt className="text-xs text-ink-muted">{labels.updated}</dt>
@@ -190,6 +191,4 @@ export function Feedback({ state, labels }: { state: EngagementActionState; labe
   return null;
 }
 
-export function formatDate(date: Date, lang: string): string {
-  return new Intl.DateTimeFormat(lang === "az" ? "az-AZ" : "en-GB", { dateStyle: "medium", timeZone: "UTC" }).format(date);
-}
+export { formatDate };

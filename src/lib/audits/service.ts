@@ -3,7 +3,11 @@ import { z } from "zod";
 import type { PrismaClient } from "@/generated/prisma/client";
 import type { Role } from "@/lib/auth/authorization";
 import { isDatabaseConstraintError } from "@/lib/auth/service";
-import { canTransitionEngagementStatus } from "./workflow";
+import {
+  canTransitionEngagementStatus,
+  engagementAllows,
+  type EngagementOperation,
+} from "./workflow";
 
 const calendarDate = z
   .string()
@@ -46,6 +50,11 @@ const assignmentSchema = z.object({
   auditorId: z.string().min(1),
 });
 
+const participantSchema = z.object({
+  engagementId: z.string().min(1),
+  userId: z.string().min(1),
+});
+
 const requirementSelectionSchema = z.object({
   engagementId: z.string().min(1),
   requirementId: z.string().min(1),
@@ -60,10 +69,31 @@ export class InvalidEngagementTransitionError extends Error {
   }
 }
 
+export class ApprovedAssessmentRequiredError extends Error {
+  constructor() {
+    super("An engagement needs at least one approved assessment before it can be approved.");
+    this.name = "ApprovedAssessmentRequiredError";
+  }
+}
+
+export class IndependentApproverRequiredError extends Error {
+  constructor() {
+    super("The engagement preparer cannot approve their own engagement.");
+    this.name = "IndependentApproverRequiredError";
+  }
+}
+
 export class EngagementRecordNotFoundError extends Error {
   constructor() {
     super("The engagement or selected record no longer exists.");
     this.name = "EngagementRecordNotFoundError";
+  }
+}
+
+export class EngagementLockedError extends Error {
+  constructor() {
+    super("The engagement status does not allow this change.");
+    this.name = "EngagementLockedError";
   }
 }
 
@@ -78,6 +108,13 @@ export class InvalidAuditorError extends Error {
   constructor() {
     super("The selected account is not an active auditor.");
     this.name = "InvalidAuditorError";
+  }
+}
+
+export class InvalidParticipantError extends Error {
+  constructor() {
+    super("The selected account is not an active security analyst participating in this engagement.");
+    this.name = "InvalidParticipantError";
   }
 }
 
@@ -103,6 +140,21 @@ function auditEvent(
     outcome: "SUCCESS",
     detail,
   };
+}
+
+// Throws when the engagement is missing or its status does not allow `operation`.
+// Callers run this inside the same transaction as the write it protects.
+export async function assertEngagementOperation(
+  db: Pick<PrismaClient, "auditEngagement">,
+  engagementId: string,
+  operation: EngagementOperation,
+): Promise<void> {
+  const engagement = await db.auditEngagement.findUnique({
+    where: { id: engagementId },
+    select: { status: true },
+  });
+  if (!engagement) throw new EngagementRecordNotFoundError();
+  if (!engagementAllows(engagement.status, operation)) throw new EngagementLockedError();
 }
 
 async function assertAuditor(db: Pick<PrismaClient, "user">, auditorId: string) {
@@ -154,9 +206,10 @@ export async function updateEngagement(
   return db.$transaction(async (tx) => {
     const existing = await tx.auditEngagement.findUnique({
       where: { id: engagementId },
-      select: { id: true, title: true, auditedOrganization: true, scope: true, periodStart: true, periodEnd: true },
+      select: { id: true, status: true, title: true, auditedOrganization: true, scope: true, periodStart: true, periodEnd: true },
     });
     if (!existing) throw new EngagementRecordNotFoundError();
+    if (!engagementAllows(existing.status, "editEngagement")) throw new EngagementLockedError();
     const changedFields = ([
       "title",
       "auditedOrganization",
@@ -188,39 +241,77 @@ export async function updateEngagement(
   });
 }
 
-export async function transitionEngagement(
-  db: PrismaClient,
-  actorId: string,
-  engagementId: string,
-  targetStatus: string,
-) {
-  return db.$transaction(async (tx) => {
-    const current = await tx.auditEngagement.findUnique({
-      where: { id: engagementId },
-      select: { status: true },
+// An assessment counts as formally approved when it is the current revision of a scope item that
+// belongs to this engagement and carries both approval markers (approveAssessment sets them together).
+const APPROVED_CURRENT_ASSESSMENT = {
+  isCurrent: true,
+  approvedAt: { not: null },
+  approvedById: { not: null },
+} as const;
+
+export async function transitionEngagement(db: PrismaClient, actorId: string, engagementId: string, targetStatus: string) {
+  try {
+    return await db.$transaction(async (tx) => {
+      const current = await tx.auditEngagement.findUnique({
+        where: { id: engagementId },
+        select: { status: true, createdById: true },
+      });
+      if (!current) throw new EngagementRecordNotFoundError();
+      if (!canTransitionEngagementStatus(current.status, targetStatus)) throw new InvalidEngagementTransitionError();
+      const approved = targetStatus === "APPROVED";
+      if (approved && current.createdById === actorId) throw new IndependentApproverRequiredError();
+      // The preconditions are part of the compare-and-set itself, so a concurrent change (for
+      // example a revised assessment) cannot slip between the check and the update.
+      const changed = await tx.auditEngagement.updateMany({
+        where: {
+          id: engagementId,
+          status: current.status,
+          ...(approved
+            ? {
+                createdById: { not: actorId },
+                scopeItems: { some: { assessments: { some: APPROVED_CURRENT_ASSESSMENT } } },
+              }
+            : {}),
+        },
+        data: { status: targetStatus, ...(approved ? { approvedById: actorId, approvedAt: new Date() } : {}) },
+      });
+      if (changed.count !== 1) {
+        if (approved) {
+          const latest = await tx.auditEngagement.findUnique({
+            where: { id: engagementId },
+            select: { status: true, createdById: true },
+          });
+          if (latest && latest.status === current.status) {
+            if (latest.createdById === actorId) throw new IndependentApproverRequiredError();
+            throw new ApprovedAssessmentRequiredError();
+          }
+        }
+        throw new InvalidEngagementTransitionError();
+      }
+      await tx.auditEvent.create({
+        data: auditEvent(actorId, "AUDIT_ENGAGEMENT_STATUS_CHANGED", "AuditEngagement", engagementId, `${current.status} -> ${targetStatus}`),
+      });
     });
-    if (!current) throw new EngagementRecordNotFoundError();
-    if (!canTransitionEngagementStatus(current.status, targetStatus)) {
-      throw new InvalidEngagementTransitionError();
+  } catch (error) {
+    if (error instanceof ApprovedAssessmentRequiredError || error instanceof IndependentApproverRequiredError) {
+      // Recorded outside the rolled-back transaction so the refused attempt stays in the audit trail.
+      await db.auditEvent
+        .create({
+          data: {
+            ...auditEvent(
+              actorId,
+              "AUDIT_ENGAGEMENT_APPROVAL_REFUSED",
+              "AuditEngagement",
+              engagementId,
+              error instanceof IndependentApproverRequiredError ? "preparer cannot approve" : "no approved assessment",
+            ),
+            outcome: "FAILURE",
+          },
+        })
+        .catch(() => undefined);
     }
-    const approved = targetStatus === "APPROVED";
-    await tx.auditEngagement.update({
-      where: { id: engagementId },
-      data: {
-        status: targetStatus,
-        ...(approved ? { approvedById: actorId, approvedAt: new Date() } : {}),
-      },
-    });
-    await tx.auditEvent.create({
-      data: auditEvent(
-        actorId,
-        "AUDIT_ENGAGEMENT_STATUS_CHANGED",
-        "AuditEngagement",
-        engagementId,
-        `${current.status} -> ${targetStatus}`,
-      ),
-    });
-  });
+    throw error;
+  }
 }
 
 export async function assignEngagementAuditor(
@@ -232,18 +323,17 @@ export async function assignEngagementAuditor(
   try {
     return await db.$transaction(async (tx) => {
       await assertAuditor(tx, data.auditorId);
-      if (!(await tx.auditEngagement.findUnique({ where: { id: data.engagementId }, select: { id: true } }))) {
-        throw new EngagementRecordNotFoundError();
-      }
+      await assertEngagementOperation(tx, data.engagementId, "editEngagement");
+      // Participants (security analysts) share this table; only the auditor slot is replaced.
       const assigned = await tx.auditEngagementMember.findMany({
         where: { engagementId: data.engagementId },
         orderBy: { createdAt: "asc" },
-        select: { id: true, userId: true },
+        select: { id: true, userId: true, user: { select: { role: true } } },
       });
       if (assigned.some(({ userId }) => userId === data.auditorId)) {
         throw new DuplicateEngagementRecordError();
       }
-      const currentAssignment = assigned[0];
+      const currentAssignment = assigned.find(({ user }) => user.role === "AUDITOR");
       const member = currentAssignment
         ? await tx.auditEngagementMember.update({
             where: { id: currentAssignment.id },
@@ -283,6 +373,7 @@ export async function selectEngagementRequirement(
 ) {
   const data = requirementSelectionSchema.parse(input);
   return db.$transaction(async (tx) => {
+    await assertEngagementOperation(tx, data.engagementId, "editEngagement");
     const requirement = await tx.regulatoryRequirement.findFirst({
       where: { id: data.requirementId, isDemo: false },
       select: { verificationStatus: true },
@@ -343,5 +434,61 @@ export async function selectEngagementRequirement(
       }
       throw error;
     }
+  });
+}
+
+// Security analysts cannot own an engagement, but an administrator may add them as
+// participants so they can upload evidence and record assessments for it.
+export async function addEngagementParticipant(db: PrismaClient, actorId: string, input: unknown) {
+  const data = participantSchema.parse(input);
+  try {
+    return await db.$transaction(async (tx) => {
+      await assertEngagementOperation(tx, data.engagementId, "editEngagement");
+      const analyst = await tx.user.findFirst({
+        where: { id: data.userId, role: "SECURITY_ANALYST", isActive: true },
+        select: { id: true },
+      });
+      if (!analyst) throw new InvalidParticipantError();
+      const member = await tx.auditEngagementMember.create({
+        data: { engagementId: data.engagementId, userId: data.userId },
+        select: { id: true },
+      });
+      await tx.auditEvent.create({
+        data: auditEvent(
+          actorId,
+          "AUDIT_ENGAGEMENT_PARTICIPANT_ADDED",
+          "AuditEngagement",
+          data.engagementId,
+          `Participant added: ${data.userId}.`,
+        ),
+      });
+      return member;
+    });
+  } catch (error) {
+    if (isDatabaseConstraintError(error, "P2002")) throw new DuplicateEngagementRecordError();
+    throw error;
+  }
+}
+
+export async function removeEngagementParticipant(db: PrismaClient, actorId: string, input: unknown) {
+  const data = participantSchema.parse(input);
+  return db.$transaction(async (tx) => {
+    await assertEngagementOperation(tx, data.engagementId, "editEngagement");
+    const member = await tx.auditEngagementMember.findFirst({
+      where: { engagementId: data.engagementId, userId: data.userId, user: { role: "SECURITY_ANALYST" } },
+      select: { id: true },
+    });
+    // The auditor slot is never removed here; it can only be reassigned.
+    if (!member) throw new InvalidParticipantError();
+    await tx.auditEngagementMember.delete({ where: { id: member.id } });
+    await tx.auditEvent.create({
+      data: auditEvent(
+        actorId,
+        "AUDIT_ENGAGEMENT_PARTICIPANT_REMOVED",
+        "AuditEngagement",
+        data.engagementId,
+        `Participant removed: ${data.userId}.`,
+      ),
+    });
   });
 }

@@ -63,7 +63,7 @@ export function UserManagement({
   return (
     <div className="space-y-8">
       <CreateUserForm labels={labels} roles={roles} lang={lang} />
-      <section className="overflow-x-auto rounded-lg border border-line bg-surface">
+      <section className="relative overflow-x-auto rounded-lg border border-line bg-surface">
         <h2 className="border-b border-line px-5 py-4 text-lg font-semibold text-ink">
           {labels.usersTitle}
         </h2>

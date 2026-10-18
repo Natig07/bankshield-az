@@ -6,13 +6,19 @@ import { hasLocale } from "@/i18n/config";
 import { requireEngagementPermission, requirePermission } from "@/lib/auth/dal";
 import { getPrisma } from "@/lib/db";
 import {
+  ApprovedAssessmentRequiredError,
+  IndependentApproverRequiredError,
+  addEngagementParticipant,
   assignEngagementAuditor,
   createEngagement,
   DuplicateEngagementRecordError,
+  EngagementLockedError,
   EngagementRecordNotFoundError,
   engagementInputSchema,
   InvalidAuditorError,
   InvalidEngagementTransitionError,
+  InvalidParticipantError,
+  removeEngagementParticipant,
   selectEngagementRequirement,
   transitionEngagement,
   UnverifiedRequirementDecisionError,
@@ -23,8 +29,8 @@ import { ENGAGEMENT_STATUSES } from "@/lib/audits/workflow";
 
 export type EngagementActionState =
   | {
-      error?: "invalidInput" | "invalidAuditor" | "notFound" | "duplicate" | "invalidTransition" | "unverifiedDecision";
-      success?: "saved" | "statusUpdated" | "requirementSelected" | "auditorAssigned";
+      error?: "invalidInput" | "invalidAuditor" | "notFound" | "duplicate" | "invalidTransition" | "unverifiedDecision" | "locked" | "invalidParticipant" | "approvedAssessmentRequired" | "independentApproverRequired";
+      success?: "saved" | "statusUpdated" | "requirementSelected" | "auditorAssigned" | "participantAdded" | "participantRemoved";
       engagementId?: string;
     }
   | null;
@@ -55,6 +61,10 @@ function knownError(error: unknown): NonNullable<EngagementActionState>["error"]
   if (error instanceof DuplicateEngagementRecordError) return "duplicate";
   if (error instanceof InvalidEngagementTransitionError) return "invalidTransition";
   if (error instanceof UnverifiedRequirementDecisionError) return "unverifiedDecision";
+  if (error instanceof EngagementLockedError) return "locked";
+  if (error instanceof InvalidParticipantError) return "invalidParticipant";
+  if (error instanceof ApprovedAssessmentRequiredError) return "approvedAssessmentRequired";
+  if (error instanceof IndependentApproverRequiredError) return "independentApproverRequired";
   return undefined;
 }
 
@@ -174,6 +184,46 @@ export async function assignAuditorAction(
     });
     revalidateAuditPages(lang, engagementId);
     return { success: "auditorAssigned" };
+  } catch (error) {
+    const code = knownError(error);
+    if (code) return { error: code };
+    throw error;
+  }
+}
+
+export async function addParticipantAction(
+  _previousState: EngagementActionState,
+  formData: FormData,
+): Promise<EngagementActionState> {
+  const engagementId = formValue(formData, "engagementId");
+  const actor = await requireEngagementPermission(engagementId, "audit:manage");
+  if (actor.role !== "ADMINISTRATOR") return { error: "invalidInput" };
+  const lang = locale(formData);
+  if (!lang) return { error: "invalidInput" };
+  try {
+    await addEngagementParticipant(getPrisma(), actor.id, { engagementId, userId: formValue(formData, "userId") });
+    revalidateAuditPages(lang, engagementId);
+    return { success: "participantAdded" };
+  } catch (error) {
+    const code = knownError(error);
+    if (code) return { error: code };
+    throw error;
+  }
+}
+
+export async function removeParticipantAction(
+  _previousState: EngagementActionState,
+  formData: FormData,
+): Promise<EngagementActionState> {
+  const engagementId = formValue(formData, "engagementId");
+  const actor = await requireEngagementPermission(engagementId, "audit:manage");
+  if (actor.role !== "ADMINISTRATOR") return { error: "invalidInput" };
+  const lang = locale(formData);
+  if (!lang) return { error: "invalidInput" };
+  try {
+    await removeEngagementParticipant(getPrisma(), actor.id, { engagementId, userId: formValue(formData, "userId") });
+    revalidateAuditPages(lang, engagementId);
+    return { success: "participantRemoved" };
   } catch (error) {
     const code = knownError(error);
     if (code) return { error: code };

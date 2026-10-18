@@ -1,7 +1,9 @@
 import "server-only";
 import type { PrismaClient } from "@/generated/prisma/client";
 import type { AuthUser } from "@/lib/auth/service";
+import { hasPermission } from "@/lib/auth/authorization";
 import { verificationStatusSchema } from "@/lib/domain/enums";
+import { getRiskList, summarizeRisks } from "@/lib/risks/data";
 import type { VerificationStatus } from "@/lib/domain/enums";
 
 export type DashboardSource = {
@@ -25,6 +27,8 @@ export type DashboardData = {
   evidenceCount: number;
   overdueActions: number;
   pendingSuggestions: number;
+  // Null when the user lacks risks:read, so the dashboard never shows risk data they cannot open.
+  risks: { active: number; bands: Record<string, number>; overdueActions: number } | null;
 };
 
 export type DashboardState =
@@ -113,6 +117,10 @@ export async function getDashboardData(
           }),
     ]);
 
+  const risks = hasPermission(user.role, "risks:read")
+    ? summarizeRisks(await getRiskList(db, { search: "", status: "ALL", category: "ALL", band: "ALL" }, now))
+    : null;
+
   const sources = documents.map((document) => ({
     code: document.code,
     title: document.title,
@@ -144,6 +152,7 @@ export async function getDashboardData(
     evidenceCount,
     overdueActions,
     pendingSuggestions,
+    risks,
   };
 }
 

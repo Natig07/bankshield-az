@@ -73,11 +73,11 @@ export function RegulatoryLibrary({
 }) {
   return (
     <div className="space-y-6">
-      <aside className="rounded-lg border border-warn-line bg-warn-bg p-4 text-sm text-warn-ink">
+      <div role="note" className="rounded-lg border border-warn-line bg-warn-bg p-4 text-sm text-warn-ink">
         <p>{labels.pendingNotice}</p>
         <p className="mt-2">{labels.lockedNotice}</p>
         <p className="mt-2">{labels.noDeleteNotice}</p>
-      </aside>
+      </div>
       {canManage && <CreateSourceForm labels={labels} lang={lang} />}
       {documents.length === 0 ? (
         <p className="rounded-lg border border-dashed border-line bg-surface p-8 text-center text-sm text-ink-muted">

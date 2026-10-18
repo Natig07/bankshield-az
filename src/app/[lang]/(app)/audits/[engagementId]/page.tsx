@@ -21,16 +21,24 @@ export default async function EngagementPage({
   let engagement: Awaited<ReturnType<typeof getEngagementDetails>> | undefined;
   let requirements: Awaited<ReturnType<typeof getSelectableRequirements>> = [];
   let auditors: { id: string; name: string; email: string }[] = [];
+  let analysts: { id: string; name: string; email: string }[] = [];
   let assessmentData: Awaited<ReturnType<typeof getEngagementAssessments>> | undefined;
   try {
     const prisma = getPrisma();
     engagement = await getEngagementDetails(prisma, user, engagementId);
     if (engagement) {
-      [requirements, auditors, assessmentData] = await Promise.all([
+      [requirements, auditors, analysts, assessmentData] = await Promise.all([
         canManage ? getSelectableRequirements(prisma, engagementId) : Promise.resolve([]),
         user.role === "ADMINISTRATOR"
           ? prisma.user.findMany({
               where: { isActive: true, role: "AUDITOR" },
+              orderBy: { name: "asc" },
+              select: { id: true, name: true, email: true },
+            })
+          : Promise.resolve([]),
+        user.role === "ADMINISTRATOR"
+          ? prisma.user.findMany({
+              where: { isActive: true, role: "SECURITY_ANALYST" },
               orderBy: { name: "asc" },
               select: { id: true, name: true, email: true },
             })
@@ -56,6 +64,7 @@ export default async function EngagementPage({
       engagement={engagement}
       requirements={requirements}
       auditors={auditors}
+      analysts={analysts}
       canManage={canManage}
       canAssignAuditors={user.role === "ADMINISTRATOR"}
       assessmentData={{
@@ -80,6 +89,8 @@ export default async function EngagementPage({
       assessmentLabels={dict.assessmentWorkflow}
       assessmentStatuses={dict.dashboard.assessmentStatuses}
       canAssess={hasPermission(user.role, "controls:assess")}
+      currentUserId={user.id}
+      lockMessages={dict.common.engagementLock}
     />
   );
 }

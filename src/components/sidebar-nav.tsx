@@ -12,10 +12,11 @@ import {
   Sparkles,
   TriangleAlert,
   Files,
+  ShieldAlert,
 } from "lucide-react";
 import type { Locale } from "@/i18n/config";
 import type { Role } from "@/lib/auth/authorization";
-import { hasPermission } from "@/lib/auth/authorization";
+import { canSeeNavItem, NAV_ITEMS } from "@/lib/auth/nav-access";
 
 export interface NavLabels {
   dashboard: string;
@@ -25,21 +26,23 @@ export interface NavLabels {
   evidence: string;
   aiReview: string;
   findings: string;
+  risks: string;
   reports: string;
   admin: string;
 }
 
-const ITEMS = [
-  { key: "dashboard", path: "", icon: LayoutDashboard },
-  { key: "regulatory", path: "/regulatory", icon: Scale },
-  { key: "audits", path: "/audits", icon: ClipboardList },
-  { key: "controls", path: "/controls", icon: Shield },
-  { key: "evidence", path: "/evidence", icon: Files },
-  { key: "aiReview", path: "/ai-review", icon: Sparkles },
-  { key: "findings", path: "/findings", icon: TriangleAlert },
-  { key: "reports", path: "/reports", icon: FileText },
-  { key: "admin", path: "/admin", icon: Settings },
-] as const;
+const ICONS = {
+  dashboard: LayoutDashboard,
+  regulatory: Scale,
+  audits: ClipboardList,
+  controls: Shield,
+  evidence: Files,
+  aiReview: Sparkles,
+  findings: TriangleAlert,
+  risks: ShieldAlert,
+  reports: FileText,
+  admin: Settings,
+} as const;
 
 export function SidebarNav({
   lang,
@@ -56,13 +59,8 @@ export function SidebarNav({
   return (
     <nav aria-label={ariaLabel} className="flex-1 overflow-y-auto px-3 py-4">
       <ul className="space-y-1">
-        {ITEMS.filter(({ key }) =>
-          key === "admin"
-            ? hasPermission(role, "users:manage")
-            : key === "controls"
-              ? hasPermission(role, "controls:read")
-              : true,
-        ).map(({ key, path, icon: Icon }) => {
+        {NAV_ITEMS.filter(({ key }) => canSeeNavItem(role, key)).map(({ key, path }) => {
+          const Icon = ICONS[key];
           const href = `/${lang}${path}`;
           const active = path === "" ? pathname === href : pathname.startsWith(href);
           return (

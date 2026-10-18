@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { validateApproval, validateAssessment } from "./assessment";
+import { UNUSABLE_EVIDENCE_STATES, validateApproval, validateAssessment } from "./assessment";
 
 describe("validateAssessment", () => {
   it("requires a reason for NOT_APPLICABLE", () => {
@@ -48,5 +48,13 @@ describe("validateApproval", () => {
       validateApproval({ status: "PARTIALLY_COMPLIANT", justification: "Reviewed", linkedEvidenceCount: 2 }),
       [],
     );
+  });
+});
+
+describe("evidence usability", () => {
+  it("rejected and superseded evidence cannot support an assessment", () => {
+    assert.ok(UNUSABLE_EVIDENCE_STATES.includes("REJECTED"));
+    assert.ok(UNUSABLE_EVIDENCE_STATES.includes("SUPERSEDED"));
+    assert.ok(!UNUSABLE_EVIDENCE_STATES.includes("PENDING_REVIEW"));
   });
 });

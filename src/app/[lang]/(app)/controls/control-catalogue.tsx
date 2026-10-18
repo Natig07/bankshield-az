@@ -208,7 +208,7 @@ function ControlFields({ labels, control }: { labels: Labels; control?: Control 
         </select>
       </label>
       <label className="text-sm font-medium text-ink sm:col-span-2">
-        {labels.description}
+        {labels.descriptionField}
         <textarea name="description" defaultValue={control?.description ?? ""} maxLength={4000} rows={3} className="mt-1 w-full rounded-md border border-line bg-surface px-3 py-2 font-normal" />
       </label>
     </>

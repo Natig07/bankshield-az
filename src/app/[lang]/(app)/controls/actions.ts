@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { ZodError } from "zod";
 import { hasLocale } from "@/i18n/config";
 import { requireEngagementPermission, requirePermission } from "@/lib/auth/dal";
+import { EngagementLockedError } from "@/lib/audits/service";
 import { getPrisma } from "@/lib/db";
 import {
   approveAssessment,
@@ -16,13 +17,15 @@ import {
   DuplicateRequirementMappingError,
   InvalidAssessmentApprovalError,
   InvalidAssessmentEvidenceError,
+  IndependentApprovalRequiredError,
   InvalidAssessmentTransitionError,
+  StaleAssessmentRevisionError,
   updateControl,
 } from "@/lib/controls/service";
 
 export type ControlActionState =
   | {
-      error?: "invalidInput" | "duplicateControl" | "duplicateMapping" | "notFound" | "invalidEvidence" | "approvalRejected" | "invalidTransition" | "concurrentRevision";
+      error?: "invalidInput" | "duplicateControl" | "duplicateMapping" | "notFound" | "invalidEvidence" | "approvalRejected" | "invalidTransition" | "concurrentRevision" | "staleRevision" | "independentApproval" | "locked";
       success?: "saved" | "mapped" | "assessmentSaved" | "approved";
     }
   | null;
@@ -46,6 +49,9 @@ function errorCode(error: unknown): NonNullable<ControlActionState>["error"] | u
   if (error instanceof InvalidAssessmentApprovalError) return "approvalRejected";
   if (error instanceof InvalidAssessmentTransitionError) return "invalidTransition";
   if (error instanceof ConcurrentAssessmentRevisionError) return "concurrentRevision";
+  if (error instanceof StaleAssessmentRevisionError) return "staleRevision";
+  if (error instanceof IndependentApprovalRequiredError) return "independentApproval";
+  if (error instanceof EngagementLockedError) return "locked";
   return undefined;
 }
 
@@ -132,6 +138,7 @@ export async function createAssessmentRevisionAction(
   if (!lang) return { error: "invalidInput" };
   try {
     await createAssessmentRevision(getPrisma(), actor, engagementId, value(formData, "scopeItemId"), {
+      expectedVersion: Number(value(formData, "expectedVersion")),
       status: value(formData, "status"),
       notApplicableReason: value(formData, "notApplicableReason") || null,
       evidenceIds: formData.getAll("evidenceIds").filter((entry): entry is string => typeof entry === "string"),

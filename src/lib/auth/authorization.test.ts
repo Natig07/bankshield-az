@@ -85,3 +85,35 @@ test("server authorization denies unauthenticated and unauthorized roles", () =>
   );
   assert.doesNotThrow(() => assertRolePermission("AUDITOR", "findings:manage"));
 });
+
+test("evidence upload and review are separate duties", () => {
+  // Analysts provide evidence; auditors review it; neither role holds both.
+  assert.equal(hasPermission("SECURITY_ANALYST", "evidence:manage"), true);
+  assert.equal(hasPermission("SECURITY_ANALYST", "evidence:review"), false);
+  assert.equal(hasPermission("AUDITOR", "evidence:review"), true);
+  assert.equal(hasPermission("AUDITOR", "evidence:manage"), false);
+  assert.equal(hasPermission("ADMINISTRATOR", "evidence:review"), true);
+  assert.equal(hasPermission("READ_ONLY_REVIEWER", "evidence:review"), false);
+  assert.equal(hasPermission("READ_ONLY_REVIEWER", "evidence:read"), true);
+});
+
+test("risk register: every role can read, only administrators and analysts can change it", () => {
+  for (const role of ROLES) assert.equal(hasPermission(role, "risks:read"), true);
+  assert.equal(hasPermission("ADMINISTRATOR", "risks:manage"), true);
+  assert.equal(hasPermission("SECURITY_ANALYST", "risks:manage"), true);
+  assert.equal(hasPermission("AUDITOR", "risks:manage"), false);
+  assert.equal(hasPermission("READ_ONLY_REVIEWER", "risks:manage"), false);
+  // Accepting a risk is a management decision reserved for administrators.
+  assert.equal(hasPermission("ADMINISTRATOR", "risks:accept"), true);
+  for (const role of ["AUDITOR", "SECURITY_ANALYST", "READ_ONLY_REVIEWER"]) {
+    assert.equal(hasPermission(role, "risks:accept"), false);
+  }
+});
+
+test("remediation work and verification are split between analyst and auditor", () => {
+  assert.doesNotThrow(() => assertRolePermission("SECURITY_ANALYST", "findings:remediate"));
+  assert.throws(() => assertRolePermission("SECURITY_ANALYST", "findings:manage"), PermissionDeniedError);
+  assert.throws(() => assertRolePermission("AUDITOR", "findings:remediate"), PermissionDeniedError);
+  assert.throws(() => assertRolePermission("READ_ONLY_REVIEWER", "findings:remediate"), PermissionDeniedError);
+  assert.doesNotThrow(() => assertRolePermission("ADMINISTRATOR", "findings:remediate"));
+});

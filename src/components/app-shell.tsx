@@ -20,6 +20,12 @@ export function AppShell({
   const roleLabel = dict.roles[user.role];
   return (
     <div className="flex min-h-screen flex-col md:flex-row">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-3 focus:top-3 focus:z-50 focus:rounded-md focus:bg-surface focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-ink"
+      >
+        {dict.common.skipToContent}
+      </a>
       <aside className="flex w-full shrink-0 flex-col bg-navy-900 md:sticky md:top-0 md:h-screen md:w-64">
         <div className="flex items-center gap-3 border-b border-navy-800 px-5 py-4">
           <ShieldCheck aria-hidden className="size-7 text-teal-accent" />
@@ -53,7 +59,7 @@ export function AppShell({
             <LanguageSwitcher current={lang} label={dict.common.language} />
           </div>
         </header>
-        <main className="flex-1 px-6 py-8">
+        <main id="main-content" tabIndex={-1} className="flex-1 px-6 py-8">
           <div className="mx-auto max-w-6xl">{children}</div>
         </main>
       </div>

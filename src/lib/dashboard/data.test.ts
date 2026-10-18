@@ -55,6 +55,7 @@ test("empty database returns honest empty counts and no static regulatory source
   assert.equal(data.evidenceCount, 0);
   assert.equal(data.overdueActions, 0);
   assert.equal(data.pendingSuggestions, 0);
+  assert.deepEqual(data.risks, { active: 0, bands: { LOW: 0, MEDIUM: 0, HIGH: 0, CRITICAL: 0 }, overdueActions: 0 });
 });
 
 test("dashboard aggregates real records and limits audit metrics to assigned engagements", async () => {
@@ -171,4 +172,20 @@ test("database failures return an error state and do not log the error message",
   } finally {
     console.error = originalError;
   }
+});
+
+test("dashboard risk metrics reflect the register and are hidden without risks:read", async () => {
+  await prisma.risk.create({
+    data: {
+      code: "R-DASH-1", title: "Dashboard risk", description: "Synthetic risk for the dashboard.", category: "OTHER",
+      ownerName: "Owner", inherentLikelihood: 5, inherentImpact: 5, status: "OPEN", createdById: "dashboard-auditor",
+      actions: { create: { title: "Late action", ownerName: "Owner", dueDate: new Date("2020-01-01T00:00:00Z"), status: "OPEN", createdById: "dashboard-auditor" } },
+    },
+  });
+  const data = await getDashboardData(prisma, dashboardUser, new Date("2026-10-15T00:00:00Z"));
+  assert.equal(data.risks?.active, 1);
+  assert.equal(data.risks?.bands.CRITICAL, 1);
+  assert.equal(data.risks?.overdueActions, 1);
+  const unknownRole = await getDashboardData(prisma, { ...dashboardUser, role: "NOT_A_ROLE" as AuthUser["role"] });
+  assert.equal(unknownRole.risks, null);
 });

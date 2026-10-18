@@ -64,6 +64,20 @@ function DashboardMetrics({
       <MetricCard label={d.metrics.evidence} value={data.evidenceCount} />
       <MetricCard label={d.metrics.overdueActions} value={data.overdueActions} />
       <MetricCard label={d.metrics.aiPending} value={data.pendingSuggestions} />
+      {data.risks && (
+        <>
+          <MetricCard label={d.metrics.activeRisks} value={data.risks.active} />
+          <MetricCard
+            label={d.metrics.risksByBand}
+            value={countsText(
+              Object.fromEntries(Object.entries(data.risks.bands).filter(([, count]) => count > 0)),
+              d.severities,
+              d.emptyMetric,
+            )}
+          />
+          <MetricCard label={d.metrics.overdueRiskActions} value={data.risks.overdueActions} />
+        </>
+      )}
     </ul>
   );
 }

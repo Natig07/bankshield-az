@@ -39,3 +39,6 @@ export function validateApproval(input: ApprovalInput): string[] {
   }
   return errors;
 }
+
+// Evidence in these review states can no longer support an assessment.
+export const UNUSABLE_EVIDENCE_STATES: string[] = ["REJECTED", "SUPERSEDED"];

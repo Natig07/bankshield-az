@@ -8,6 +8,8 @@ import {
   createAssessmentRevisionAction,
   type ControlActionState,
 } from "../../controls/actions";
+import { formatDate } from "@/lib/format/date";
+import { UNUSABLE_EVIDENCE_STATES } from "@/lib/domain/assessment";
 
 type Labels = Dictionary["assessmentWorkflow"];
 type Evidence = {
@@ -33,6 +35,7 @@ type ScopeItem = {
     status: string;
     notApplicableReason: string | null;
     justification: string | null;
+    assessedById: string | null;
     approvedById: string | null;
     approvedAt: string | null;
     createdAt: string;
@@ -54,6 +57,8 @@ export function AssessmentWorkflow({
   scopeItems,
   evidence,
   canAssess,
+  canApprove,
+  currentUserId,
 }: {
   lang: string;
   engagementId: string;
@@ -63,6 +68,8 @@ export function AssessmentWorkflow({
   scopeItems: ScopeItem[];
   evidence: Evidence[];
   canAssess: boolean;
+  canApprove: boolean;
+  currentUserId: string;
 }) {
   return (
     <section className="space-y-4">
@@ -71,7 +78,9 @@ export function AssessmentWorkflow({
         <p className="rounded-lg border border-dashed border-line bg-surface p-5 text-sm text-ink-muted">{labels.emptyScope}</p>
       ) : (
         scopeItems.map((scopeItem) => {
-          const eligibleEvidence = evidence.filter((record) => record.controlId === null || record.controlId === scopeItem.control.id);
+          const eligibleEvidence = evidence.filter(
+            (record) => (record.controlId === null || record.controlId === scopeItem.control.id) && !UNUSABLE_EVIDENCE_STATES.includes(record.reviewStatus),
+          );
           return (
             <article key={scopeItem.id} className="rounded-lg border border-line bg-surface p-5">
               <header className="flex flex-wrap items-start justify-between gap-3">
@@ -124,7 +133,10 @@ export function AssessmentWorkflow({
                           ))}
                         </ul>
                       )}
-                      {canAssess && assessment.isCurrent && !assessment.approvedAt && (
+                      {canApprove && assessment.isCurrent && !assessment.approvedAt && assessment.assessedById === currentUserId && (
+                        <p className="mt-3 border-t border-line pt-3 text-sm text-ink-muted">{labels.independentApprovalNotice}</p>
+                      )}
+                      {canApprove && assessment.isCurrent && !assessment.approvedAt && assessment.assessedById !== currentUserId && (
                         <ApproveForm
                           lang={lang}
                           engagementId={engagementId}
@@ -181,6 +193,11 @@ function RevisionForm({
         <input type="hidden" name="lang" value={lang} />
         <input type="hidden" name="engagementId" value={engagementId} />
         <input type="hidden" name="scopeItemId" value={scopeItem.id} />
+        <input
+          type="hidden"
+          name="expectedVersion"
+          value={scopeItem.assessments.reduce((latest, assessment) => Math.max(latest, assessment.version), 0)}
+        />
         <label className="text-sm font-medium text-ink">
           {labels.status}
           <select name="status" defaultValue={currentStatus ?? "NOT_TESTED"} className="mt-1 w-full rounded-md border border-line bg-surface px-3 py-2 font-normal">
@@ -245,6 +262,3 @@ function Feedback({ state, labels }: { state: ControlActionState; labels: Labels
   return null;
 }
 
-function formatDate(value: string, lang: string) {
-  return new Intl.DateTimeFormat(lang, { dateStyle: "medium", timeZone: "UTC" }).format(new Date(value));
-}

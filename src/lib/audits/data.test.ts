@@ -83,6 +83,16 @@ test("engagement list has honest empty state, filters results, and enforces enga
     normalizeEngagementFilters({ search: "missing", status: "DRAFT" }),
   )).length, 0);
   assert.equal(normalizeEngagementFilters({ status: "NOT_A_STATUS" }).status, "ALL");
+  // The search form submits `q`; repeated parameters must not be stringified.
+  assert.equal(normalizeEngagementFilters({ q: "  Second  " }).search, "Second");
+  assert.equal(normalizeEngagementFilters({ q: ["first", "second"] }).search, "first");
+  assert.equal(normalizeEngagementFilters({ status: ["IN_REVIEW", "DRAFT"] }).status, "IN_REVIEW");
+  assert.equal(normalizeEngagementFilters({ q: "x".repeat(300) }).search.length, 120);
+  assert.equal((await getEngagementList(
+    prisma,
+    administrator,
+    normalizeEngagementFilters({ q: "second" }),
+  )).length, 1);
   assert.equal(await getEngagementDetails(prisma, auditorTwo, first.id), null);
   assert.equal((await getEngagementDetails(prisma, viewer, first.id))?.id, undefined);
 });
