@@ -353,3 +353,21 @@ describe("reviewing suggestions", () => {
     assert.equal(events, 1);
   });
 });
+
+describe("provider error diagnostics", () => {
+  it("keeps Google's category, reason and a redacted short message, never the key", async () => {
+    const { describeProviderError } = await import("./gemini");
+    const key = "AIzaFAKEFAKEFAKEFAKEFAKEFAKE123456";
+    const error = Object.assign(
+      new Error(JSON.stringify({ error: { code: 400, status: "INVALID_ARGUMENT", message: `API key not valid: ${key}. Pass a valid key.`, details: [{ reason: "API_KEY_INVALID" }] } })),
+      { name: "ApiError", status: 400 },
+    );
+    const summary = describeProviderError(error, key);
+    assert.equal(summary.googleStatus, "INVALID_ARGUMENT");
+    assert.deepEqual(summary.reasons, ["API_KEY_INVALID"]);
+    assert.equal(summary.status, 400);
+    assert.ok(!JSON.stringify(summary).includes(key));
+    assert.ok(String(summary.googleMessage).includes("[redacted]"));
+    assert.deepEqual(describeProviderError(new Error("socket hang up"), key), { errorName: "Error", status: undefined });
+  });
+});
