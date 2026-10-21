@@ -195,6 +195,7 @@ describe("prompt and data minimisation", () => {
     const schema = modelOutputJsonSchema();
     assert.equal(schema.type, "object");
     assert.ok(!("$schema" in schema));
+    assert.ok(!JSON.stringify(schema).match(/"(pattern|minLength|maxLength|additionalProperties)"/), "only the subset Gemini accepts");
   });
 });
 
@@ -369,5 +370,49 @@ describe("provider error diagnostics", () => {
     assert.ok(!JSON.stringify(summary).includes(key));
     assert.ok(String(summary.googleMessage).includes("[redacted]"));
     assert.deepEqual(describeProviderError(new Error("socket hang up"), key), { errorName: "Error", status: undefined });
+  });
+});
+
+describe("Gemini client fallbacks", () => {
+  it("retries without the schema (then minimal) when Google answers 400 INVALID_ARGUMENT, and never leaks the key", async () => {
+    const { createServer } = await import("node:http");
+    const { createGeminiClient } = await import("./gemini");
+    const seen: Array<{ schema: boolean; mime: boolean }> = [];
+    const server = createServer((req, res) => {
+      let body = "";
+      req.on("data", (chunk) => (body += chunk));
+      req.on("end", () => {
+        const config = JSON.parse(body).generationConfig ?? {};
+        seen.push({ schema: "responseJsonSchema" in config || "responseSchema" in config, mime: "responseMimeType" in config });
+        res.setHeader("content-type", "application/json");
+        if (seen.length < 3) {
+          res.statusCode = 400;
+          res.end(JSON.stringify({ error: { code: 400, status: "INVALID_ARGUMENT", message: "Request contains an invalid argument." } }));
+        } else {
+          res.end(JSON.stringify({ candidates: [{ content: { role: "model", parts: [{ text: '{"suggestions":[]}' }] }, finishReason: "STOP" }] }));
+        }
+      });
+    });
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    const address = server.address();
+    const port = typeof address === "object" && address ? address.port : 0;
+    const previous = process.env.GOOGLE_GEMINI_BASE_URL;
+    process.env.GOOGLE_GEMINI_BASE_URL = `http://127.0.0.1:${port}`;
+    const errors: unknown[][] = [];
+    const original = console.error;
+    console.error = (...args: unknown[]) => void errors.push(args);
+    try {
+      const client = createGeminiClient("AIzaFAKEKEYFORTESTING1234567890");
+      const text = await client.generate({ model: "gemini-test", systemInstruction: "s", userContent: "u", jsonSchema: { type: "object" }, timeoutMs: 10_000 });
+      assert.equal(text, '{"suggestions":[]}');
+    } finally {
+      console.error = original;
+      if (previous === undefined) delete process.env.GOOGLE_GEMINI_BASE_URL;
+      else process.env.GOOGLE_GEMINI_BASE_URL = previous;
+      await new Promise((resolve) => server.close(resolve));
+    }
+    assert.deepEqual(seen, [{ schema: true, mime: true }, { schema: false, mime: true }, { schema: false, mime: false }]);
+    assert.equal(errors.length, 2);
+    assert.ok(!JSON.stringify(errors).includes("FAKEKEY"));
   });
 });

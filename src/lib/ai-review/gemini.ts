@@ -29,31 +29,42 @@ export function createGeminiClient(apiKey: string): AiReviewModelClient {
     async generate(request) {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), request.timeoutMs);
+      // Fallbacks only for "invalid argument" rejections: first without the schema constraint,
+      // then with the bare minimum. The server validates the answer with Zod either way.
+      const attempts: Array<{ label: string; config: Record<string, unknown> }> = [
+        { label: "schema", config: { responseMimeType: "application/json", responseJsonSchema: request.jsonSchema, temperature: 0.2 } },
+        { label: "json-only", config: { responseMimeType: "application/json", temperature: 0.2 } },
+        { label: "minimal", config: {} },
+      ];
       try {
-        const response = await ai.models.generateContent({
-          model: request.model,
-          contents: request.userContent,
-          config: {
-            systemInstruction: request.systemInstruction,
-            responseMimeType: "application/json",
-            responseJsonSchema: request.jsonSchema,
-            temperature: 0.2,
-            maxOutputTokens: 8_192,
-            abortSignal: controller.signal,
-            httpOptions: { timeout: request.timeoutMs },
-          },
-        });
-        if (response.promptFeedback?.blockReason) throw new ModelCallError("blocked");
-        const text = response.text;
-        if (!text) throw new ModelCallError("providerError");
-        return text;
-      } catch (error) {
-        if (error instanceof ModelCallError) throw error;
-        const code = classify(error, controller.signal.aborted);
-        // Diagnostics only: error class, HTTP status and Google's own error category/reason.
-        // Never the request, the records sent or the key.
-        console.error("Gemini request failed.", { code, ...describeProviderError(error, apiKey) });
-        throw new ModelCallError(code);
+        for (const [index, attempt] of attempts.entries()) {
+          try {
+            const response = await ai.models.generateContent({
+              model: request.model,
+              contents: request.userContent,
+              config: {
+                systemInstruction: request.systemInstruction,
+                maxOutputTokens: 8_192,
+                abortSignal: controller.signal,
+                httpOptions: { timeout: request.timeoutMs },
+                ...attempt.config,
+              },
+            });
+            if (response.promptFeedback?.blockReason) throw new ModelCallError("blocked");
+            const text = response.text;
+            if (!text) throw new ModelCallError("providerError");
+            return text;
+          } catch (error) {
+            if (error instanceof ModelCallError) throw error;
+            const code = classify(error, controller.signal.aborted);
+            // Diagnostics only: error class, HTTP status and Google's own error category/reason.
+            // Never the request, the records sent or the key.
+            console.error("Gemini request failed.", { attempt: attempt.label, code, ...describeProviderError(error, apiKey) });
+            const retryable = typeof error === "object" && error !== null && "status" in error && (error as { status: unknown }).status === 400;
+            if (!retryable || index === attempts.length - 1 || controller.signal.aborted) throw new ModelCallError(code);
+          }
+        }
+        throw new ModelCallError("providerError");
       } finally {
         clearTimeout(timer);
       }

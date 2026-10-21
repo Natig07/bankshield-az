@@ -25,10 +25,24 @@ export const modelOutputSchema = z.object({
 
 export type ModelSuggestion = z.infer<typeof modelSuggestionSchema>;
 
+// Keywords outside the subset Gemini's structured output reliably accepts. Zod still enforces
+// every one of them on the answer, so dropping them from the request loses no safety.
+const UNSUPPORTED_KEYWORDS = new Set(["$schema", "pattern", "minLength", "maxLength", "additionalProperties", "format"]);
+
+function simplify(node: unknown): unknown {
+  if (Array.isArray(node)) return node.map(simplify);
+  if (node && typeof node === "object") {
+    return Object.fromEntries(
+      Object.entries(node as Record<string, unknown>)
+        .filter(([key]) => !UNSUPPORTED_KEYWORDS.has(key))
+        .map(([key, value]) => [key, simplify(value)]),
+    );
+  }
+  return node;
+}
+
 // JSON Schema handed to Gemini as a structured-output constraint. The server still
 // re-validates everything with Zod; the constraint only improves the odds of valid output.
 export function modelOutputJsonSchema(): Record<string, unknown> {
-  const schema = z.toJSONSchema(modelOutputSchema) as Record<string, unknown>;
-  delete schema.$schema;
-  return schema;
+  return simplify(z.toJSONSchema(modelOutputSchema)) as Record<string, unknown>;
 }
