@@ -12,6 +12,7 @@ import {
 import { formatDate } from "@/lib/format/date";
 import { EngagementLockNotice } from "@/components/engagement-lock-notice";
 import { engagementAllows } from "@/lib/audits/workflow";
+import { SubmitButton } from "@/components/submit-button";
 
 type Labels = Dictionary["evidenceWorkflow"];
 type Record = {
@@ -82,7 +83,7 @@ export function EvidenceWorkspace({
             {engagements.map((engagement) => <option key={engagement.id} value={engagement.id}>{engagement.title}</option>)}
           </select>
         </div>
-        <button type="submit" className="rounded-md bg-navy-900 px-4 py-2 text-sm font-medium text-white">{labels.apply}</button>
+        <SubmitButton className="rounded-md bg-navy-900 px-4 py-2 text-sm font-medium text-white">{labels.apply}</SubmitButton>
       </form>
 
       <section aria-labelledby="evidence-list-title" className="space-y-3">
@@ -198,9 +199,9 @@ function UploadForm({
           </div>
           <div className="md:col-span-2">
             <Feedback state={state} labels={labels} />
-            <button type="submit" disabled={pending || disabled} className="mt-3 rounded-md bg-navy-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-60">
+            <SubmitButton disabled={pending || disabled} className="mt-3 rounded-md bg-navy-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-60">
               {pending ? labels.uploading : labels.upload}
-            </button>
+            </SubmitButton>
           </div>
         </form>
       )}
@@ -224,9 +225,9 @@ function ReviewForm({ lang, labels, evidenceId }: { lang: string; labels: Labels
         <textarea name="note" maxLength={1000} rows={2} className="mt-1 w-full rounded-md border border-line bg-surface px-3 py-2 font-normal" />
       </label>
       <Feedback state={state} labels={labels} />
-      <button type="submit" disabled={pending} className="justify-self-start rounded-md border border-line px-3 py-2 text-sm font-medium text-ink disabled:opacity-60">
+      <SubmitButton disabled={pending} className="justify-self-start rounded-md border border-line px-3 py-2 text-sm font-medium text-ink disabled:opacity-60">
         {pending ? labels.reviewing : labels.saveReview}
-      </button>
+      </SubmitButton>
     </form>
   );
 }

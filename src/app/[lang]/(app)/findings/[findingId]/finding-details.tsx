@@ -15,6 +15,7 @@ import { Feedback, FindingFields, input, primary, secondary, severityClass, type
 import { formatDate } from "@/lib/format/date";
 import { EngagementLockNotice } from "@/components/engagement-lock-notice";
 import { engagementAllows } from "@/lib/audits/workflow";
+import { SubmitButton } from "@/components/submit-button";
 
 type Finding = {
   id: string; title: string; description: string; severity: string; status: string; requirementId: string | null;
@@ -106,7 +107,7 @@ function EditFinding({ lang, labels, finding }: { lang: string; labels: Labels; 
         <FindingFields labels={labels} requirements={finding.requirements} defaults={finding} />
         <div className="md:col-span-2">
           <Feedback state={state} labels={labels} />
-          <button type="submit" disabled={pending} className={`mt-3 ${primary}`}>{pending ? labels.saving : labels.save}</button>
+          <SubmitButton disabled={pending} className={`mt-3 ${primary}`}>{pending ? labels.saving : labels.save}</SubmitButton>
         </div>
       </form>
     </details>
@@ -133,7 +134,7 @@ function StatusForm({ lang, labels, finding, isCreator }: { lang: string; labels
         </label>
         <div className="md:col-span-2">
           <Feedback state={state} labels={labels} />
-          <button type="submit" disabled={pending} className={`mt-2 ${primary}`}>{pending ? labels.changingStatus : labels.changeStatus}</button>
+          <SubmitButton disabled={pending} className={`mt-2 ${primary}`}>{pending ? labels.changingStatus : labels.changeStatus}</SubmitButton>
         </div>
       </form>
     </section>
@@ -164,7 +165,7 @@ function ActionControls({ lang, labels, findingId, findingStatus, action, eviden
           </select>
         </label>
       )}
-      <button type="submit" disabled={pending} className={secondary}>{labels.markStatus} {labels.actionStatuses[target as keyof typeof labels.actionStatuses]}</button>
+      <SubmitButton disabled={pending} className={secondary}>{labels.markStatus} {labels.actionStatuses[target as keyof typeof labels.actionStatuses]}</SubmitButton>
       {target === "VERIFIED" && <span className="text-xs text-ink-muted">{labels.verifiedHint}</span>}
       <div className="w-full"><Feedback state={state} labels={labels} /></div>
     </form>
@@ -182,7 +183,7 @@ function AddAction({ lang, labels, findingId }: { lang: string; labels: Labels; 
       <label className="text-sm font-medium text-ink">{labels.dueDate}<input name="dueDate" type="date" required className={input} /></label>
       <div className="md:col-span-3">
         <Feedback state={state} labels={labels} />
-        <button type="submit" disabled={pending} className={`mt-2 ${primary}`}>{pending ? labels.addingAction : labels.addAction}</button>
+        <SubmitButton disabled={pending} className={`mt-2 ${primary}`}>{pending ? labels.addingAction : labels.addAction}</SubmitButton>
       </div>
     </form>
   );

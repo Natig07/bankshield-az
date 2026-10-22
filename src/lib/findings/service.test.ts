@@ -9,7 +9,7 @@ import { ZodError } from "zod";
 import { PrismaClient } from "@/generated/prisma/client";
 import { PermissionDeniedError, type Role } from "@/lib/auth/authorization";
 import { EngagementLockedError } from "@/lib/audits/service";
-import { getFindingDetails, getFindingList, normalizeFindingFilters, summarizeFindings } from "./data";
+import { getFindingDetails, getFindingEngagements, getFindingList, normalizeFindingFilters, summarizeFindings } from "./data";
 import {
   addRemediationAction,
   createFinding,
@@ -320,4 +320,18 @@ test("scoped queries, filters, overdue counts and summaries", async () => {
   assert.equal(summary.severities.CRITICAL, 1);
   assert.equal(summary.overdueActions, 1);
   assert.deepEqual(normalizeFindingFilters({ status: ["bogus"], severity: "nope", q: ["a", "b"] }), { search: "a", status: "ALL", severity: "ALL" });
+});
+
+test("the create-finding form gets each engagement's selected requirements and can link one on create", async () => {
+  const mine = await fixture();
+  const options = await getFindingEngagements(prisma, { id: ids.auditor, role: "AUDITOR" });
+  const entry = options.find((option) => option.id === mine.engagementId);
+  assert.ok(entry, "the engagement is offered");
+  assert.deepEqual(entry.requirements.map((requirement) => requirement.id), [mine.requirementId]);
+  assert.ok(!("requirementSelections" in entry));
+  // A requirement taken from that list is accepted; one from another engagement is not.
+  const linked = await createFinding(prisma, auditor(), findingInput(mine.engagementId, { requirementId: mine.requirementId }));
+  assert.equal((await prisma.auditFinding.findUniqueOrThrow({ where: { id: linked.id } })).requirementId, mine.requirementId);
+  const other = await fixture();
+  await assert.rejects(createFinding(prisma, auditor(), findingInput(mine.engagementId, { requirementId: other.requirementId })));
 });

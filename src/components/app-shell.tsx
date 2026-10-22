@@ -1,10 +1,13 @@
+import { Suspense } from "react";
 import { ShieldCheck } from "lucide-react";
 import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/get-dictionary";
 import { LanguageSwitcher } from "./language-switcher";
+import { NavigationProgress } from "./navigation-progress";
 import { SidebarNav } from "./sidebar-nav";
 import { logoutAction } from "@/app/[lang]/actions";
 import type { AuthUser } from "@/lib/auth/service";
+import { SubmitButton } from "@/components/submit-button";
 
 export function AppShell({
   lang,
@@ -20,6 +23,9 @@ export function AppShell({
   const roleLabel = dict.roles[user.role];
   return (
     <div className="flex min-h-screen flex-col md:flex-row">
+      <Suspense fallback={null}>
+        <NavigationProgress label={dict.common.loading} />
+      </Suspense>
       <a
         href="#main-content"
         className="sr-only focus:not-sr-only focus:absolute focus:left-3 focus:top-3 focus:z-50 focus:rounded-md focus:bg-surface focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-ink"
@@ -52,9 +58,9 @@ export function AppShell({
             </div>
             <form action={logoutAction}>
               <input type="hidden" name="lang" value={lang} />
-              <button type="submit" className="text-sm font-medium text-teal-strong underline underline-offset-2">
+              <SubmitButton className="text-sm font-medium text-teal-strong underline underline-offset-2">
                 {dict.auth.logout}
-              </button>
+              </SubmitButton>
             </form>
             <LanguageSwitcher current={lang} label={dict.common.language} />
           </div>

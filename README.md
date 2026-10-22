@@ -6,7 +6,7 @@ Bilingual (Azerbaijani and English) cybersecurity compliance and audit support p
 
 ## Current state
 
-The bilingual UI requires an active account. Login and logout use Argon2id verification and revocable SQLite-backed sessions. Administrators can manage users, the security control catalogue, and requirement mappings. The Regulatory Library supports source, version, and requirement maintenance with review history. Audit engagements support scoped access, auditor assignment, requirement selection, status history, control assessment revisions, approval, and assessment-specific references to existing evidence metadata. Evidence upload, review and authorized download, a Risk Register, and findings with remediation tracking are implemented and covered by tests on isolated databases. Reporting and AI analysis are not implemented. Nothing has been verified in a browser or end-to-end; see NEXT_STEPS.md for the manual checklist.
+The bilingual UI requires an active account. Login and logout use Argon2id verification and revocable SQLite-backed sessions. Administrators can manage users, the security control catalogue, and requirement mappings. The Regulatory Library supports source, version, and requirement maintenance with review history. Audit engagements support scoped access, auditor assignment, requirement selection, status history, control assessment revisions, approval, and assessment-specific references to existing evidence metadata. Evidence upload, review and authorized download, a Risk Register, and findings with remediation tracking are implemented and covered by tests on isolated databases. An engagement report (HTML, print or save as PDF, English or Azerbaijani) summarises scope, assessments with evidence references and SHA-256 hashes, findings, linked risks and limitations, with a content fingerprint, and AI Review uses Gemini. The report is not a PDF generator or a signed document. Nothing has been verified in a browser or end-to-end; see NEXT_STEPS.md for the manual checklist.
 
 ## Run it locally
 
@@ -117,6 +117,19 @@ Migration `20261015191722_control_assessment_evidence` adds `ControlAssessmentEv
 Assessment approval requires an approver different from the assessor. Assessment evidence links identify selected evidence records; they do not verify file contents or establish a compliance conclusion. Mapping does not change regulatory verification state. The dashboard does not show a compliance percentage.
 
 The additive migration `20261015124511_audit_engagement_workflow` adds the audited-organisation column and the unique requirement-selection record. Existing engagement rows are preserved; older rows receive an empty organisation value until an authorised user updates their metadata. Do not reset or recreate the database to apply it.
+
+## AI Review (Gemini)
+
+The AI Review page analyses an engagement's scope items, findings and linked risks against the regulatory requirements in scope and stores the results as **pending hypotheses** that an auditor accepts or rejects. Accepting records a decision only; it never changes findings, risks, assessments or severities.
+
+It is disabled until a key is configured. Add these to your own `.env` (never commit it) and restart the app:
+
+```
+GEMINI_API_KEY="your-key-from-Google-AI-Studio"
+GEMINI_MODEL="gemini-3.8-flash"   # optional
+```
+
+Selected records are sent to Google's Gemini API (requirement and control text, assessment status, evidence metadata only, findings, remediation plans, linked risks). Evidence file contents, user names and emails, passwords and secrets are not sent. Review your organisation's data-protection and outsourcing rules before enabling it with real bank data.
 
 ## Evidence
 

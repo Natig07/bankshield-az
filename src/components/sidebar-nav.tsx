@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link, { useLinkStatus } from "next/link";
 import { usePathname } from "next/navigation";
 import {
   ClipboardList,
@@ -17,6 +17,7 @@ import {
 import type { Locale } from "@/i18n/config";
 import type { Role } from "@/lib/auth/authorization";
 import { canSeeNavItem, NAV_ITEMS } from "@/lib/auth/nav-access";
+import { Spinner } from "./spinner";
 
 export interface NavLabels {
   dashboard: string;
@@ -43,6 +44,12 @@ const ICONS = {
   reports: FileText,
   admin: Settings,
 } as const;
+
+// Must render inside the Link it reports on. It appears only while that navigation is in flight.
+function NavPending() {
+  const { pending } = useLinkStatus();
+  return pending ? <Spinner className="ml-auto size-3.5 text-teal-accent" /> : null;
+}
 
 export function SidebarNav({
   lang,
@@ -76,6 +83,7 @@ export function SidebarNav({
               >
                 <Icon aria-hidden className="size-4 shrink-0" />
                 <span>{labels[key]}</span>
+                <NavPending />
               </Link>
             </li>
           );

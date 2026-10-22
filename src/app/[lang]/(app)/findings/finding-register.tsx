@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { FINDING_STATUSES, SEVERITIES } from "@/lib/domain/enums";
 import { createFindingAction, type FindingActionState } from "./actions";
 import { Feedback, FindingFields, input, primary, severityClass, type Labels } from "./finding-fields";
+import { SubmitButton } from "@/components/submit-button";
 
 type Row = {
   id: string; title: string; severity: string; status: string; updatedAt: string;
@@ -15,7 +16,7 @@ type Row = {
 export function FindingRegister({ lang, labels, filters, canManage, summary, engagements, findings }: {
   lang: string; labels: Labels; filters: { search: string; status: string; severity: string }; canManage: boolean;
   summary: { open: number; severities: Record<string, number>; overdueActions: number };
-  engagements: { id: string; title: string }[]; findings: Row[];
+  engagements: EngagementOption[]; findings: Row[];
 }) {
   const filtered = filters.search || filters.status !== "ALL" || filters.severity !== "ALL";
   return (
@@ -51,7 +52,7 @@ export function FindingRegister({ lang, labels, filters, canManage, summary, eng
           </select>
         </label>
         <div className="flex items-end gap-2">
-          <button type="submit" className={primary}>{labels.apply}</button>
+          <SubmitButton className={primary}>{labels.apply}</SubmitButton>
           {filtered && <Link href={`/${lang}/findings`} className="rounded-md border border-line px-4 py-2 text-sm text-ink">{labels.clear}</Link>}
         </div>
       </form>
@@ -90,7 +91,10 @@ function Tile({ label, value, tone }: { label: string; value: number; tone?: str
   );
 }
 
-function CreateFinding({ lang, labels, engagements }: { lang: string; labels: Labels; engagements: { id: string; title: string }[] }) {
+type EngagementOption = { id: string; title: string; requirements: { id: string; clauseId: string; topic: string | null }[] };
+
+function CreateFinding({ lang, labels, engagements }: { lang: string; labels: Labels; engagements: EngagementOption[] }) {
+  const [selectedId, setSelectedId] = useState(engagements[0]?.id ?? "");
   const [state, action, pending] = useActionState<FindingActionState, FormData>(createFindingAction, null);
   if (engagements.length === 0) return <p className="rounded-md border border-line bg-surface p-4 text-sm text-ink-muted">{labels.noEngagements}</p>;
   return (
@@ -99,14 +103,14 @@ function CreateFinding({ lang, labels, engagements }: { lang: string; labels: La
       <form action={action} className="grid gap-4 border-t border-line p-5 md:grid-cols-2">
         <input type="hidden" name="lang" value={lang} />
         <label className="text-sm font-medium text-ink md:col-span-2">{labels.engagement}
-          <select name="engagementId" required className={input}>
+          <select name="engagementId" required value={selectedId} onChange={(event) => setSelectedId(event.target.value)} className={input}>
             {engagements.map((e) => <option key={e.id} value={e.id}>{e.title}</option>)}
           </select>
         </label>
-        <FindingFields labels={labels} requirements={[]} />
+        <FindingFields key={selectedId} labels={labels} requirements={engagements.find((e) => e.id === selectedId)?.requirements ?? []} />
         <div className="md:col-span-2">
           <Feedback state={state} labels={labels} />
-          <button type="submit" disabled={pending} className={`mt-3 ${primary}`}>{pending ? labels.creating : labels.create}</button>
+          <SubmitButton disabled={pending} className={`mt-3 ${primary}`}>{pending ? labels.creating : labels.create}</SubmitButton>
         </div>
       </form>
     </details>

@@ -42,6 +42,8 @@ model User {
   sessions           Session[]
 
   @@index([role])
+  aiReviewRuns          AiReviewRun[]
+  aiReviewedSuggestions AiReviewSuggestion[] @relation("AiReviewReviewer")
 }
 
 model Session {
@@ -138,6 +140,7 @@ model RegulatoryRequirement {
   @@unique([versionId, clauseId])
   @@index([verificationStatus])
   @@index([topic])
+  aiReviewSuggestions AiReviewSuggestion[]
 }
 
 // Append-only log of verification status changes (versions or requirements).
@@ -220,6 +223,8 @@ model AuditEngagement {
   aiRuns                AIAnalysisRun[]
 
   @@index([status])
+  aiReviewRuns        AiReviewRun[]
+  aiReviewSuggestions AiReviewSuggestion[]
 }
 
 // Explicit record that a requirement was selected for this engagement. Selection
@@ -422,6 +427,68 @@ model AISuggestion {
   @@index([runId])
   @@index([reviewStatus])
   @@index([requirementId])
+}
+
+// ───────────────────── Gemini-assisted review (engagement level) ─────────────────────
+// Separate from AIAnalysisRun/AISuggestion above, which are tied to evidence text.
+// These records hold hypotheses only: they never change findings, risks or assessments.
+
+model AiReviewRun {
+  id              String   @id @default(cuid())
+  engagementId    String
+  requestedById   String
+  provider        String   @default("gemini")
+  model           String
+  promptVersion   String
+  // SUCCEEDED | FAILED
+  status          String
+  // Machine-readable failure code only (never provider messages or secrets).
+  errorCode       String?
+  // JSON counts of the records sent, e.g. {"scopeItems":4,"findings":2,"risks":1}
+  inputSummary    String
+  suggestionCount Int      @default(0)
+  durationMs      Int?
+  createdAt       DateTime @default(now())
+
+  engagement  AuditEngagement      @relation(fields: [engagementId], references: [id], onDelete: Restrict)
+  requestedBy User                 @relation(fields: [requestedById], references: [id], onDelete: Restrict)
+  suggestions AiReviewSuggestion[]
+
+  @@index([engagementId, createdAt])
+}
+
+model AiReviewSuggestion {
+  id                 String    @id @default(cuid())
+  runId              String
+  engagementId       String
+  // SCOPE_ITEM | FINDING | RISK: the record the hypothesis is about (validated against the input set)
+  targetType         String
+  targetId           String
+  requirementId      String?
+  // POTENTIAL_GAP | INSUFFICIENT_BASIS
+  kind               String
+  title              String
+  reasoning          String
+  // JSON arrays of strings
+  recommendedActions String
+  verificationSteps  String
+  // LOW | MEDIUM | HIGH. Not a risk severity and not a compliance status.
+  confidence         String
+  limitations        String
+  // PENDING_REVIEW | ACCEPTED | REJECTED
+  reviewStatus       String    @default("PENDING_REVIEW")
+  reviewedById       String?
+  reviewedAt         DateTime?
+  reviewNote         String?
+  createdAt          DateTime  @default(now())
+
+  run         AiReviewRun            @relation(fields: [runId], references: [id], onDelete: Restrict)
+  engagement  AuditEngagement        @relation(fields: [engagementId], references: [id], onDelete: Restrict)
+  requirement RegulatoryRequirement? @relation(fields: [requirementId], references: [id], onDelete: Restrict)
+  reviewedBy  User?                  @relation("AiReviewReviewer", fields: [reviewedById], references: [id], onDelete: Restrict)
+
+  @@index([runId])
+  @@index([engagementId, reviewStatus])
 }
 
 // ───────────────────── Findings and remediation ─────────────────────

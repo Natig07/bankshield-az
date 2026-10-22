@@ -15,6 +15,7 @@ import {
 } from "../actions";
 import { bandClass, Feedback, RiskFields, type AssetOption, type Labels } from "../risk-fields";
 import { formatDate } from "@/lib/format/date";
+import { SubmitButton } from "@/components/submit-button";
 
 type Risk = {
   id: string;
@@ -207,7 +208,7 @@ function EditRisk({ lang, labels, assets, risk }: { lang: string; labels: Labels
         <RiskFields labels={labels} assets={assets} defaults={risk} />
         <div className="md:col-span-2">
           <Feedback state={state} labels={labels} />
-          <button type="submit" disabled={pending} className={`mt-3 ${primary}`}>{pending ? labels.saving : labels.save}</button>
+          <SubmitButton disabled={pending} className={`mt-3 ${primary}`}>{pending ? labels.saving : labels.save}</SubmitButton>
         </div>
       </form>
     </details>
@@ -243,7 +244,7 @@ function StatusForm({ lang, labels, risk, canAccept }: { lang: string; labels: L
         )}
         <div className="md:col-span-2">
           <Feedback state={state} labels={labels} />
-          <button type="submit" disabled={pending} className={`mt-2 ${primary}`}>{pending ? labels.changingStatus : labels.changeStatus}</button>
+          <SubmitButton disabled={pending} className={`mt-2 ${primary}`}>{pending ? labels.changingStatus : labels.changeStatus}</SubmitButton>
         </div>
       </form>
     </section>
@@ -263,7 +264,7 @@ function LinkForm({ lang, labels, riskId, controls }: { lang: string; labels: La
           {controls.map((c) => <option key={c.id} value={c.id}>{c.code} · {c.title}</option>)}
         </select>
       </label>
-      <button type="submit" disabled={pending} className={primary}>{pending ? labels.linking : labels.linkControl}</button>
+      <SubmitButton disabled={pending} className={primary}>{pending ? labels.linking : labels.linkControl}</SubmitButton>
       <div className="w-full"><Feedback state={state} labels={labels} /></div>
     </form>
   );
@@ -277,7 +278,7 @@ function UnlinkForm({ lang, labels, riskId, controlId }: { lang: string; labels:
       <input type="hidden" name="riskId" value={riskId} />
       <input type="hidden" name="controlId" value={controlId} />
       <Feedback state={state} labels={labels} />
-      <button type="submit" disabled={pending} className={secondary}>{labels.unlink}</button>
+      <SubmitButton disabled={pending} className={secondary}>{labels.unlink}</SubmitButton>
     </form>
   );
 }
@@ -290,9 +291,9 @@ function ActionStatusForm({ lang, labels, riskId, actionId, target }: { lang: st
       <input type="hidden" name="riskId" value={riskId} />
       <input type="hidden" name="actionId" value={actionId} />
       <input type="hidden" name="targetStatus" value={target} />
-      <button type="submit" disabled={pending} className={secondary}>
+      <SubmitButton disabled={pending} className={secondary}>
         {labels.markStatus} {labels.actionStatuses[target as keyof typeof labels.actionStatuses]}
-      </button>
+      </SubmitButton>
       {state?.error && <span role="alert" className="ml-2 text-xs text-rose-800">{labels.errors[state.error]}</span>}
     </form>
   );
@@ -310,7 +311,7 @@ function AddAction({ lang, labels, riskId }: { lang: string; labels: Labels; ris
       <label className="text-sm font-medium text-ink">{labels.dueDate}<input name="dueDate" type="date" required className={field} /></label>
       <div className="md:col-span-3">
         <Feedback state={state} labels={labels} />
-        <button type="submit" disabled={pending} className={`mt-2 ${primary}`}>{pending ? labels.addingAction : labels.addAction}</button>
+        <SubmitButton disabled={pending} className={`mt-2 ${primary}`}>{pending ? labels.addingAction : labels.addAction}</SubmitButton>
       </div>
     </form>
   );

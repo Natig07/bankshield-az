@@ -15,6 +15,7 @@ import {
   type RegulatoryActionState,
 } from "./actions";
 import { canTransitionVerificationStatus } from "@/lib/regulatory/workflow";
+import { SubmitButton } from "@/components/submit-button";
 
 type Labels = Dictionary["regulatoryLibrary"];
 
@@ -480,9 +481,9 @@ function TransitionForm({
             {labels.reviewNote}
             <textarea name="note" required maxLength={2000} rows={2} className="mt-1 block w-full rounded border border-line px-2 py-1.5 text-ink" />
           </label>
-          <button type="submit" disabled={pending} className="rounded bg-navy-900 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60">
+          <SubmitButton disabled={pending} className="rounded bg-navy-900 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60">
             {pending ? labels.saving : labels.save}
-          </button>
+          </SubmitButton>
         </>
       )}
       <Feedback state={state} labels={labels} />
@@ -588,9 +589,9 @@ function Submit({
   return (
     <div className="md:col-span-2">
       <Feedback state={state} labels={labels} />
-      <button type="submit" disabled={pending} className="mt-2 rounded-md bg-navy-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-60">
+      <SubmitButton disabled={pending} className="mt-2 rounded-md bg-navy-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-60">
         {pending ? labels.saving : labels.save}
-      </button>
+      </SubmitButton>
     </div>
   );
 }

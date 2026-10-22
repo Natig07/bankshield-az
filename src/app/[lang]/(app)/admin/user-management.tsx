@@ -8,6 +8,7 @@ import {
   updateUserRoleAction,
   type UserActionState,
 } from "./actions";
+import { SubmitButton } from "@/components/submit-button";
 
 type UserRow = {
   id: string;
@@ -105,9 +106,9 @@ function CreateUserForm({ labels, roles, lang }: { labels: UserLabels; roles: Re
         <RoleSelect id="new-role" name="role" value="READ_ONLY_REVIEWER" label={labels.role} roles={roles} />
         <div className="md:col-span-2">
           <ActionFeedback state={state} labels={labels} />
-          <button type="submit" disabled={pending} className="mt-3 rounded-md bg-navy-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-60">
+          <SubmitButton disabled={pending} className="mt-3 rounded-md bg-navy-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-60">
             {pending ? labels.creating : labels.createUser}
-          </button>
+          </SubmitButton>
         </div>
       </form>
     </section>
@@ -137,9 +138,9 @@ function ManagedUserRow({
           <input type="hidden" name="lang" value={lang} />
           <input type="hidden" name="userId" value={user.id} />
           <RoleSelect id={`role-${user.id}`} name="role" value={role} label={labels.role} roles={roles} />
-          <button type="submit" disabled={rolePending} className="rounded border border-line px-2 py-1 text-xs text-ink disabled:opacity-60">
+          <SubmitButton disabled={rolePending} className="rounded border border-line px-2 py-1 text-xs text-ink disabled:opacity-60">
             {rolePending ? labels.saving : labels.saveRole}
-          </button>
+          </SubmitButton>
         </form>
         <ActionFeedback state={roleState} labels={labels} />
       </td>
@@ -149,9 +150,9 @@ function ManagedUserRow({
           <input type="hidden" name="lang" value={lang} />
           <input type="hidden" name="userId" value={user.id} />
           <input type="hidden" name="isActive" value={String(!user.isActive)} />
-          <button type="submit" disabled={activePending} className="text-sm font-medium text-teal-strong underline disabled:opacity-60">
+          <SubmitButton disabled={activePending} className="text-sm font-medium text-teal-strong underline disabled:opacity-60">
             {activePending ? labels.saving : user.isActive ? labels.disable : labels.enable}
-          </button>
+          </SubmitButton>
         </form>
         <ActionFeedback state={activeState} labels={labels} />
       </td>

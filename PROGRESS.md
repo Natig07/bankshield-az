@@ -236,3 +236,25 @@ See NEXT_STEPS.md: validate and migrate the Prisma schema on a machine where the
 
 ## Step 1: Planning and first scaffold (2026-10-14)
 - Inspected the empty environment, retrieved the three regulatory sources through an automated summarizer, wrote the original planning files for a .NET/Angular design. That design is superseded by the Next.js-only decision above. The regulatory findings carry over unchanged.
+
+## AI Review (Gemini)
+
+- Replaced the AI Review placeholder with a working, engagement-level analysis page using the official `@google/genai` SDK. Additive migration `20261019000000_ai_review` adds `AiReviewRun` and `AiReviewSuggestion`; the older `AIAnalysisRun`/`AISuggestion` tables are untouched and unused.
+- Suggestions are saved `PENDING_REVIEW`; accept/reject (compare-and-set, audit events) records a human decision only. Minimal-data payload with opaque refs, untrusted-data prompt framing, JSON-schema constraint plus Zod validation, graceful handling of missing configuration, API errors, timeouts and invalid output. AZ/EN strings added under `aiReviewWorkflow`.
+- Tested with a fake model client (unit/integration) and in a real browser against a local stub that mimics the Gemini HTTP endpoint. **Not tested against live Gemini.**
+
+## Engagement report
+- Added `src/lib/reports/` (`getEngagementReport`, `recordReportGeneration`, `listReportRecords`) and the pages `/[lang]/reports` and `/[lang]/reports/[engagementId]`, replacing the Reports placeholder. No schema change: the existing `ReportRecord` table stores only a SHA-256 content fingerprint, never report text.
+- The report covers engagement details, a limitations notice, a summary, selected requirements with verification status, current control assessments with evidence names, review status and SHA-256, findings with remediation actions, risks linked to in-scope controls, and an evidence summary. Untested items are shown as "Not tested", never as compliant. AI suggestions are not included.
+- Access: `reports:read` to view, `reports:manage` to record a generation. Non-administrators reach only engagements they created or belong to; other ids return not found.
+- Added English and Azerbaijani `reportWorkflow` strings and `src/lib/reports/service.test.ts` (4 tests).
+- Verification: `npm test` 167 tests, 166 passing, 0 failing, 1 skipped (Windows-only); typecheck, lint and build passed. A browser smoke run against an isolated QA database loaded the list and report in EN and AZ and recorded a generation. Not run: a PDF export check and a check against the user's development database.
+
+
+## Loading feedback
+- Added `SubmitButton` (`src/components/submit-button.tsx`): every form submit button now disables itself and shows a spinner while its Server Action runs; with several named buttons in one form only the pressed one spins. `src/components/submit-button.test.ts` fails if a raw `<button type="submit">` is added.
+- Added `NavigationProgress` (a thin teal bar across the top while an in-app link is followed) and a per-link spinner in the sidebar (`useLinkStatus`).
+- Added `loading.tsx` skeletons for Administration, Regulatory Library, Security Controls, AI Review and Evidence. Audit Engagements, Findings, Risks and Reports deliberately have none: their detail pages call `notFound()`, and a `loading.tsx` above them would make a missing record answer HTTP 200 (`route-guards.test.ts`). They use the progress bar and sidebar spinner instead.
+- Motion is dropped under `prefers-reduced-motion`. Added `common.loading` in EN and AZ.
+- Verification: `npm test` 168 tests, 167 passing, 0 failing, 1 skipped; typecheck and lint passed; build passed (see note below). A browser run on an isolated QA database with throttled requests showed the skeleton, the progress bar, the sidebar spinner and the form spinner, and all cleared afterwards. Not checked: the Azerbaijani label in a screen reader, and mobile widths.
+- Note: `next build` intermittently stops with a Next.js 16.4.0 upgrade/security notice from its own check; retrying succeeds. Review upgrading Next separately.
