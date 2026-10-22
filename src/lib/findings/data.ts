@@ -147,6 +147,19 @@ export async function getFindingEngagements(db: PrismaClient, user: User) {
       ...(user.role === "ADMINISTRATOR" ? {} : { OR: [{ createdById: user.id }, { members: { some: { userId: user.id } } }] }),
     },
     orderBy: [{ title: "asc" }],
-    select: { id: true, title: true },
-  });
+    select: {
+      id: true,
+      title: true,
+      // Requirements already selected for the engagement: the only ones a finding may reference.
+      requirementSelections: {
+        orderBy: { requirement: { clauseId: "asc" } },
+        select: { requirement: { select: { id: true, clauseId: true, topic: true } } },
+      },
+    },
+  }).then((rows) =>
+    rows.map(({ requirementSelections, ...engagement }) => ({
+      ...engagement,
+      requirements: requirementSelections.map(({ requirement }) => requirement),
+    })),
+  );
 }
