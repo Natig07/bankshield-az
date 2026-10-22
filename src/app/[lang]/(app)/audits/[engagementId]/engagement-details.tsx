@@ -18,6 +18,7 @@ import {
 import { Feedback, formatDate } from "../engagement-list";
 import { EngagementLockNotice } from "@/components/engagement-lock-notice";
 import { engagementAllows } from "@/lib/audits/workflow";
+import { SubmitButton } from "@/components/submit-button";
 
 type Labels = Dictionary["auditWorkflow"];
 type Detail = {
@@ -307,7 +308,7 @@ function EditEngagementForm({ engagement, lang, labels }: { engagement: Detail; 
           <textarea name="scope" defaultValue={engagement.scope} required minLength={2} maxLength={5000} rows={3} className="mt-1 w-full rounded-md border border-line bg-surface px-3 py-2 font-normal" />
         </label>
         <Feedback state={state} labels={labels} />
-        <button type="submit" disabled={pending} className="justify-self-start rounded-md bg-navy-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-60">{pending ? labels.saving : labels.save}</button>
+        <SubmitButton disabled={pending} className="justify-self-start rounded-md bg-navy-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-60">{pending ? labels.saving : labels.save}</SubmitButton>
       </form>
     </details>
   );
@@ -348,7 +349,7 @@ function StatusForm({
         <select id="engagement-target-status" name="targetStatus" className="rounded-md border border-line bg-surface px-3 py-2 text-sm text-ink">
           {transitions.map((status) => <option key={status} value={status}>{labels.statusLabels[status]}</option>)}
         </select>
-        <button type="submit" disabled={pending} className="rounded-md border border-line px-3 py-2 text-sm font-medium text-ink disabled:opacity-60">{pending ? labels.updatingStatus : labels.saveStatus}</button>
+        <SubmitButton disabled={pending} className="rounded-md border border-line px-3 py-2 text-sm font-medium text-ink disabled:opacity-60">{pending ? labels.updatingStatus : labels.saveStatus}</SubmitButton>
       </div></>)}
       {approvalPossibleByState && approvalBlockers.length > 0 && (
         <ul className="mt-2 list-disc pl-5 text-sm text-amber-900" data-testid="approval-blockers">
@@ -382,7 +383,7 @@ function AssignAuditorForm({
           <option value="">—</option>
           {auditors.map((auditor) => <option key={auditor.id} value={auditor.id}>{auditor.name} ({auditor.email})</option>)}
         </select>
-        <button type="submit" disabled={pending || auditors.length === 0} className="rounded-md bg-navy-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-60">{pending ? labels.assigningAuditor : labels.addAuditor}</button>
+        <SubmitButton disabled={pending || auditors.length === 0} className="rounded-md bg-navy-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-60">{pending ? labels.assigningAuditor : labels.addAuditor}</SubmitButton>
       </div>
       <div className="mt-2"><Feedback state={state} labels={labels} /></div>
     </form>
@@ -425,7 +426,7 @@ function RequirementSelectionForm({
       )}
       {verified && <input type="hidden" name="acknowledgeUnverified" value="false" />}
       <Feedback state={state} labels={labels} />
-      <button type="submit" disabled={pending} className="mt-3 rounded-md border border-line px-3 py-2 text-sm font-medium text-ink disabled:opacity-60">{pending ? labels.selectingRequirement : labels.selectRequirement}</button>
+      <SubmitButton disabled={pending} className="mt-3 rounded-md border border-line px-3 py-2 text-sm font-medium text-ink disabled:opacity-60">{pending ? labels.selectingRequirement : labels.selectRequirement}</SubmitButton>
     </form>
   );
 }
@@ -543,7 +544,7 @@ function ParticipantsSection({
                   <input type="hidden" name="lang" value={lang} />
                   <input type="hidden" name="engagementId" value={engagementId} />
                   <input type="hidden" name="userId" value={person.id} />
-                  <button type="submit" disabled={removing} className="rounded-md border border-line px-2 py-1 text-xs text-ink disabled:opacity-60">{labels.removeParticipant}</button>
+                  <SubmitButton disabled={removing} className="rounded-md border border-line px-2 py-1 text-xs text-ink disabled:opacity-60">{labels.removeParticipant}</SubmitButton>
                 </form>
               )}
             </li>
@@ -559,7 +560,7 @@ function ParticipantsSection({
             <option value="">{labels.chooseParticipant}</option>
             {available.map((person) => <option key={person.id} value={person.id}>{person.name} ({person.email})</option>)}
           </select>
-          <button type="submit" disabled={adding || available.length === 0} className="rounded-md bg-navy-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-60">{adding ? labels.addingParticipant : labels.addParticipant}</button>
+          <SubmitButton disabled={adding || available.length === 0} className="rounded-md bg-navy-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-60">{adding ? labels.addingParticipant : labels.addParticipant}</SubmitButton>
           {available.length === 0 && <p className="w-full text-xs text-ink-muted">{labels.noAnalysts}</p>}
         </form>
       )}

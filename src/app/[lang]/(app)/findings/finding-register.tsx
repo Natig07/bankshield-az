@@ -5,6 +5,7 @@ import { useActionState, useState } from "react";
 import { FINDING_STATUSES, SEVERITIES } from "@/lib/domain/enums";
 import { createFindingAction, type FindingActionState } from "./actions";
 import { Feedback, FindingFields, input, primary, severityClass, type Labels } from "./finding-fields";
+import { SubmitButton } from "@/components/submit-button";
 
 type Row = {
   id: string; title: string; severity: string; status: string; updatedAt: string;
@@ -51,7 +52,7 @@ export function FindingRegister({ lang, labels, filters, canManage, summary, eng
           </select>
         </label>
         <div className="flex items-end gap-2">
-          <button type="submit" className={primary}>{labels.apply}</button>
+          <SubmitButton className={primary}>{labels.apply}</SubmitButton>
           {filtered && <Link href={`/${lang}/findings`} className="rounded-md border border-line px-4 py-2 text-sm text-ink">{labels.clear}</Link>}
         </div>
       </form>
@@ -109,7 +110,7 @@ function CreateFinding({ lang, labels, engagements }: { lang: string; labels: La
         <FindingFields key={selectedId} labels={labels} requirements={engagements.find((e) => e.id === selectedId)?.requirements ?? []} />
         <div className="md:col-span-2">
           <Feedback state={state} labels={labels} />
-          <button type="submit" disabled={pending} className={`mt-3 ${primary}`}>{pending ? labels.creating : labels.create}</button>
+          <SubmitButton disabled={pending} className={`mt-3 ${primary}`}>{pending ? labels.creating : labels.create}</SubmitButton>
         </div>
       </form>
     </details>

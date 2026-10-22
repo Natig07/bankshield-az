@@ -9,6 +9,7 @@ import {
   updateControlAction,
   type ControlActionState,
 } from "./actions";
+import { SubmitButton } from "@/components/submit-button";
 
 type Labels = Dictionary["controlWorkflow"];
 type Requirement = {
@@ -160,9 +161,9 @@ function CreateControlForm({ lang, labels }: { lang: string; labels: Labels }) {
         <ControlFields labels={labels} />
         <div className="sm:col-span-2">
           <Feedback state={state} labels={labels} />
-          <button type="submit" disabled={pending} className="mt-3 rounded-md bg-navy-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-60">
+          <SubmitButton disabled={pending} className="mt-3 rounded-md bg-navy-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-60">
             {pending ? labels.saving : labels.saveControl}
-          </button>
+          </SubmitButton>
         </div>
       </form>
     </details>
@@ -187,9 +188,9 @@ function UpdateControlForm({
         <input type="hidden" name="controlId" value={control.id} />
         <ControlFields labels={labels} control={control} />
         <Feedback state={state} labels={labels} />
-        <button type="submit" disabled={pending} className="justify-self-start rounded-md border border-line px-4 py-2 text-sm font-medium text-ink disabled:opacity-60">
+        <SubmitButton disabled={pending} className="justify-self-start rounded-md border border-line px-4 py-2 text-sm font-medium text-ink disabled:opacity-60">
           {pending ? labels.saving : labels.saveControl}
-        </button>
+        </SubmitButton>
       </form>
     </details>
   );
@@ -250,9 +251,9 @@ function CreateMappingForm({
       </label>
       <p className="mt-2 text-xs text-ink-muted">{labels.pendingVerificationNotice}</p>
       <Feedback state={state} labels={labels} />
-      <button type="submit" disabled={pending || requirements.length === 0} className="mt-3 rounded-md border border-line px-4 py-2 text-sm font-medium text-ink disabled:opacity-60">
+      <SubmitButton disabled={pending || requirements.length === 0} className="mt-3 rounded-md border border-line px-4 py-2 text-sm font-medium text-ink disabled:opacity-60">
         {pending ? labels.saving : labels.mapRequirement}
-      </button>
+      </SubmitButton>
     </form>
   );
 }

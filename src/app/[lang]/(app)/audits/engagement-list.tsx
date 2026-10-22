@@ -8,6 +8,7 @@ import { createEngagementAction } from "./actions";
 import type { EngagementFilters } from "@/lib/audits/data";
 import { ENGAGEMENT_STATUSES } from "@/lib/audits/workflow";
 import { formatDate } from "@/lib/format/date";
+import { SubmitButton } from "@/components/submit-button";
 
 type Labels = Dictionary["auditWorkflow"];
 type EngagementRow = Awaited<ReturnType<typeof import("@/lib/audits/data").getEngagementList>>[number];
@@ -65,7 +66,7 @@ export function EngagementList({
             ))}
           </select>
         </div>
-        <button type="submit" className="rounded-md bg-navy-900 px-4 py-2 text-sm font-medium text-white">{labels.searchButton}</button>
+        <SubmitButton className="rounded-md bg-navy-900 px-4 py-2 text-sm font-medium text-white">{labels.searchButton}</SubmitButton>
         {(filters.search || filters.status !== "ALL") && (
           <Link href={`/${lang}/audits`} className="rounded-md border border-line px-4 py-2 text-sm text-ink">{labels.clearFilters}</Link>
         )}
@@ -148,9 +149,9 @@ function CreateEngagementForm({
         </div>
         <div className="md:col-span-2">
           <Feedback state={state} labels={labels} />
-          <button type="submit" disabled={pending || choices.length === 0} className="mt-3 rounded-md bg-navy-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-60">
+          <SubmitButton disabled={pending || choices.length === 0} className="mt-3 rounded-md bg-navy-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-60">
             {pending ? labels.creating : labels.create}
-          </button>
+          </SubmitButton>
         </div>
       </form>
     </details>

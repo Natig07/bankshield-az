@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import type { Dictionary } from "@/i18n/get-dictionary";
 import type { getAiReviewData, SuggestionFilter } from "@/lib/ai-review/data";
 import { reviewSuggestionAction, runAiReviewAction, type AiReviewActionState } from "./actions";
+import { SubmitButton } from "@/components/submit-button";
 
 type Labels = Dictionary["aiReviewWorkflow"];
 type Data = Awaited<ReturnType<typeof getAiReviewData>>;
@@ -81,7 +82,7 @@ export function AiReviewWorkspace({
                 {FILTERS.map((value) => <option key={value} value={value}>{labels.filters[value]}</option>)}
               </select>
             </div>
-            <button type="submit" className="rounded-md border border-line px-4 py-2 text-sm font-medium text-ink">{labels.openEngagement}</button>
+            <SubmitButton className="rounded-md border border-line px-4 py-2 text-sm font-medium text-ink">{labels.openEngagement}</SubmitButton>
           </form>
 
           {!data.selectedId ? (
@@ -135,9 +136,9 @@ function GenerateForm({ lang, engagementId, labels, canManage, geminiConfigured 
         <span>{labels.consentLabel}</span>
       </label>
       <div className="flex flex-wrap items-center gap-3">
-        <button type="submit" disabled={!geminiConfigured || pending} className="rounded-md bg-navy-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-60">
+        <SubmitButton disabled={!geminiConfigured || pending} className="rounded-md bg-navy-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-60">
           {pending ? labels.generating : labels.generate}
-        </button>
+        </SubmitButton>
         <div aria-live="polite"><Feedback state={state} labels={labels} /></div>
       </div>
     </form>
@@ -204,8 +205,8 @@ function ReviewForm({ suggestionId, lang, labels }: { suggestionId: string; lang
       <textarea id={noteId} name="note" rows={2} maxLength={1000} aria-describedby={`${noteId}-hint`} className="w-full rounded-md border border-line bg-surface px-3 py-2 text-sm" />
       <p id={`${noteId}-hint`} className="text-xs text-ink-muted">{labels.reviewNoteHint} {labels.acceptNotice}</p>
       <div className="flex flex-wrap items-center gap-2">
-        <button type="submit" name="decision" value="ACCEPTED" disabled={pending} className="rounded-md bg-navy-900 px-3 py-2 text-sm font-medium text-white disabled:opacity-60">{pending ? labels.reviewing : labels.accept}</button>
-        <button type="submit" name="decision" value="REJECTED" disabled={pending} className="rounded-md border border-line px-3 py-2 text-sm font-medium text-ink disabled:opacity-60">{labels.reject}</button>
+        <SubmitButton name="decision" value="ACCEPTED" disabled={pending} className="rounded-md bg-navy-900 px-3 py-2 text-sm font-medium text-white disabled:opacity-60">{pending ? labels.reviewing : labels.accept}</SubmitButton>
+        <SubmitButton name="decision" value="REJECTED" disabled={pending} className="rounded-md border border-line px-3 py-2 text-sm font-medium text-ink disabled:opacity-60">{labels.reject}</SubmitButton>
         <div aria-live="polite"><Feedback state={state} labels={labels} /></div>
       </div>
     </form>

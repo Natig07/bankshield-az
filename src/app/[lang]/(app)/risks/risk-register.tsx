@@ -5,6 +5,7 @@ import { useActionState } from "react";
 import { ASSET_TYPES, RISK_CATEGORIES, RISK_STATUSES, SEVERITIES } from "@/lib/domain/enums";
 import { createAssetAction, createRiskAction, type RiskActionState } from "./actions";
 import { bandClass, Feedback, RiskFields, type AssetOption, type Labels } from "./risk-fields";
+import { SubmitButton } from "@/components/submit-button";
 
 type Row = {
   id: string;
@@ -71,7 +72,7 @@ export function RiskRegister({
         <Select name="category" label={labels.filterCategory} value={filters.category} all={labels.all} options={RISK_CATEGORIES.map((v) => [v, labels.categories[v]])} />
         <Select name="band" label={labels.filterBand} value={filters.band} all={labels.all} options={SEVERITIES.map((v) => [v, labels.bands[v]])} />
         <div className="flex gap-2 sm:col-span-2 lg:col-span-5">
-          <button type="submit" className="rounded-md bg-navy-900 px-4 py-2 text-sm font-medium text-white">{labels.apply}</button>
+          <SubmitButton className="rounded-md bg-navy-900 px-4 py-2 text-sm font-medium text-white">{labels.apply}</SubmitButton>
           {filtered && <Link href={`/${lang}/risks`} className="rounded-md border border-line px-4 py-2 text-sm text-ink">{labels.clear}</Link>}
         </div>
       </form>
@@ -145,7 +146,7 @@ function CreateRisk({ lang, labels, assets }: { lang: string; labels: Labels; as
         <RiskFields labels={labels} assets={assets} />
         <div className="md:col-span-2">
           <Feedback state={state} labels={labels} />
-          <button type="submit" disabled={pending} className="mt-3 rounded-md bg-navy-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-60">{pending ? labels.creating : labels.create}</button>
+          <SubmitButton disabled={pending} className="mt-3 rounded-md bg-navy-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-60">{pending ? labels.creating : labels.create}</SubmitButton>
         </div>
       </form>
     </details>
@@ -184,7 +185,7 @@ function AssetsSection({ lang, labels, assets, canManage }: { lang: string; labe
           <label className="text-sm font-medium text-ink">{labels.fields.owner}<input name="ownerName" required minLength={2} maxLength={120} className={field} /></label>
           <div className="md:col-span-3">
             <Feedback state={state} labels={labels} />
-            <button type="submit" disabled={pending} className="mt-2 rounded-md border border-line px-4 py-2 text-sm font-medium text-ink disabled:opacity-60">{pending ? labels.addingAsset : labels.addAsset}</button>
+            <SubmitButton disabled={pending} className="mt-2 rounded-md border border-line px-4 py-2 text-sm font-medium text-ink disabled:opacity-60">{pending ? labels.addingAsset : labels.addAsset}</SubmitButton>
           </div>
         </form>
       )}

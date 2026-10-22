@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { loginAction, type LoginActionState } from "./actions";
+import { SubmitButton } from "@/components/submit-button";
 
 export function LoginForm({
   lang,
@@ -57,13 +58,12 @@ export function LoginForm({
           {labels.invalidCredentials}
         </p>
       )}
-      <button
-        type="submit"
+      <SubmitButton
         disabled={pending}
         className="w-full rounded-md bg-navy-900 px-4 py-2 font-medium text-white hover:bg-navy-800 disabled:opacity-60"
       >
         {pending ? labels.submitting : labels.submit}
-      </button>
+      </SubmitButton>
     </form>
   );
 }

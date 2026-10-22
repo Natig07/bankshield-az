@@ -250,3 +250,11 @@ See NEXT_STEPS.md: validate and migrate the Prisma schema on a machine where the
 - Added English and Azerbaijani `reportWorkflow` strings and `src/lib/reports/service.test.ts` (4 tests).
 - Verification: `npm test` 167 tests, 166 passing, 0 failing, 1 skipped (Windows-only); typecheck, lint and build passed. A browser smoke run against an isolated QA database loaded the list and report in EN and AZ and recorded a generation. Not run: a PDF export check and a check against the user's development database.
 
+
+## Loading feedback
+- Added `SubmitButton` (`src/components/submit-button.tsx`): every form submit button now disables itself and shows a spinner while its Server Action runs; with several named buttons in one form only the pressed one spins. `src/components/submit-button.test.ts` fails if a raw `<button type="submit">` is added.
+- Added `NavigationProgress` (a thin teal bar across the top while an in-app link is followed) and a per-link spinner in the sidebar (`useLinkStatus`).
+- Added `loading.tsx` skeletons for Administration, Regulatory Library, Security Controls, AI Review and Evidence. Audit Engagements, Findings, Risks and Reports deliberately have none: their detail pages call `notFound()`, and a `loading.tsx` above them would make a missing record answer HTTP 200 (`route-guards.test.ts`). They use the progress bar and sidebar spinner instead.
+- Motion is dropped under `prefers-reduced-motion`. Added `common.loading` in EN and AZ.
+- Verification: `npm test` 168 tests, 167 passing, 0 failing, 1 skipped; typecheck and lint passed; build passed (see note below). A browser run on an isolated QA database with throttled requests showed the skeleton, the progress bar, the sidebar spinner and the form spinner, and all cleared afterwards. Not checked: the Azerbaijani label in a screen reader, and mobile widths.
+- Note: `next build` intermittently stops with a Next.js 16.4.0 upgrade/security notice from its own check; retrying succeeds. Review upgrading Next separately.

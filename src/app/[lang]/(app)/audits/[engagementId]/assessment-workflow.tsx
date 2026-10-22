@@ -10,6 +10,7 @@ import {
 } from "../../controls/actions";
 import { formatDate } from "@/lib/format/date";
 import { UNUSABLE_EVIDENCE_STATES } from "@/lib/domain/assessment";
+import { SubmitButton } from "@/components/submit-button";
 
 type Labels = Dictionary["assessmentWorkflow"];
 type Evidence = {
@@ -218,9 +219,9 @@ function RevisionForm({
         </label>
         <p className="text-xs text-ink-muted">{eligibleEvidence.length ? labels.evidenceHint : labels.noEvidence}</p>
         <Feedback state={state} labels={labels} />
-        <button type="submit" disabled={pending} className="justify-self-start rounded-md bg-navy-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-60">
+        <SubmitButton disabled={pending} className="justify-self-start rounded-md bg-navy-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-60">
           {pending ? labels.saving : labels.saveRevision}
-        </button>
+        </SubmitButton>
       </form>
     </details>
   );
@@ -248,9 +249,9 @@ function ApproveForm({
         <textarea name="justification" required minLength={10} maxLength={2000} rows={2} className="mt-1 w-full rounded-md border border-line bg-surface px-3 py-2 font-normal" />
       </label>
       <Feedback state={state} labels={labels} />
-      <button type="submit" disabled={pending} className="mt-3 rounded-md border border-line px-4 py-2 text-sm font-medium text-ink disabled:opacity-60">
+      <SubmitButton disabled={pending} className="mt-3 rounded-md border border-line px-4 py-2 text-sm font-medium text-ink disabled:opacity-60">
         {pending ? labels.approving : labels.approveAssessment}
-      </button>
+      </SubmitButton>
     </form>
   );
 }
