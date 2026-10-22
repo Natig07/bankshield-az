@@ -16,7 +16,7 @@ Not used, by decision: a separate ASP.NET Core or Node.js backend, Angular, Dock
 | Auth | server-side Argon2id + opaque database sessions + centralized RBAC | implemented; integration tests run against isolated SQLite fixtures |
 | Forms | React Hook Form | not installed (added when forms exist) |
 | Charts | Recharts | not installed (Phase 6) |
-| PDF reports | library to be chosen (Phase 6) | pending |
+| Reports | server-rendered HTML with print stylesheet (`window.print` to save as PDF) | implemented; no server-side PDF |
 | PDF/DOCX text extraction | local libraries, to be chosen (Phase 4) | pending |
 | shadcn/ui | optional, only where it helps | not installed |
 
